@@ -1,0 +1,111 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+	<title>My Remote Drawing App</title>
+	<meta http-equiv="Content-Language" content="English" />
+	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+	<link rel="stylesheet" type="text/css" href="style.css" media="screen" />
+	 
+	<script src="scripts/jquery-1.6.4.min.js"></script>	
+	<script src="scripts/draw.js"></script>
+	
+	<script type="text/javascript" src="http://akili.no.de/faye.js"></script>
+	<script type="text/javascript" language="javascript">
+		
+		var client = new Faye.Client('http://akili.no.de/faye');
+		//generate random id
+		client.drawid = Math.round(Math.random()*100000000);
+		
+		var subscription = client.subscribe('/faye/draw/edits', function(data) {
+			// handle data. contains shape: rect and mouseevt: evt		
+			//ignore my updates - can also do this in server..
+			//..as faye extension
+			if (data.drawid === client.drawid)
+				return;
+				
+			//console.info("Edit info detected from sum1 on shape: " + data.shape.shpid);						
+			processDistrEvent(data);
+		});
+		//have successfully connected
+		subscription.callback(function() {
+		  console.info('Subscription to faye server is now active.');
+		});		
+
+		//function to publish change
+		function publishChange(data){
+			//may need to detect if the data is from current client
+			//thus, add id
+			//may need to detect its not you
+			data.drawid = client.drawid;
+			client.publish('/faye/draw/clients', data);
+		}
+		
+		$(document).ready(function() {
+			init2();				
+		});
+	</script>
+</head>
+<body>
+
+	<div id="wrap">
+
+	<div id="top"> </div>
+
+	<div id="header">
+	<h1><a href="#">Collaborative Drawing Prototype</a></h1>
+	<h2>An example of a collaborative drawing app</h2>
+	</div>
+
+	<div id="menu">
+	<ul>
+	<li><a href="#">Home</a></li>
+	<li><a href="#">About</a></li>
+
+	</ul>
+	</div>
+
+	<div id="content">
+	<div class="left"> 
+
+	<h2>Shapes Editor</h2>
+
+	<canvas id="canv1" width="700px" height="650px">No html5 support for your browser. Sorry.</canvas>
+
+	<h2><a href="#">Instructions</a></h2>
+	<div class="articles">
+        <!-- <img src="images/pic.jpg" alt="Example pic" style="border: 3px solid #ccc;" /> -->
+Open up this page in separate browsers (please, not IE) and draw! To use, double click to create a new shape. Resize using the red boxes.<br />
+	Other instructions to be added.
+	 <p>
+	 Disclaimer: This is a work in progess. Expect the unexpected.
+	 </p>
+	</div>
+	</div>
+
+
+	<!-- <div class="right"> 
+
+	<h2>Toolbar</h2>
+	<ul>
+	<li><a id="clear" href="#">Clear canvas</a></li> 
+	<li><a href="#">Do sthng</a></li> 
+	<li><a href="#">Do sthng</a></li> 
+	<li><a href="#">Do Sthng</a></li> 
+	</ul>
+	
+	
+	</div>
+	-->
+	<div style="clear: both;"> </div> 
+
+	
+	</div>
+
+	<div id="bottom"> </div>
+	<div id="footer">
+	Copyright 2011.
+	</div>
+	</div>
+
+</body>
+</html>
