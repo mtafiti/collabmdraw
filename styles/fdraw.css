@@ -1,0 +1,364 @@
+
+
+body {
+    font-family: arial,helvetica,san-serif;
+    font-size: 12px;
+}
+br {
+    clear: both;
+}
+
+img {
+    border: 0 none;
+}
+
+/** login styles **/
+fieldset {
+    border-top: 1px solid #E5E2DE;
+    margin-top: 10px;
+    padding: 0 15px;
+	color: #493F2D;
+	width:550px;
+    font: 13px/1.53846 "Lucida Grande","Lucida Sans Unicode",arial,sans-serif;
+}
+.fieldset-div {
+    height: 100%;
+    padding-left: 9%;
+    padding-top: 20%;
+}
+#login input, #login select, #login textarea {
+    padding: 6px 2px 6px 7px;
+	width: 273px;
+	background: none repeat scroll 0 0 #E9E9E9;
+    border: medium none;
+    border-radius: 3px 3px 3px 3px;
+    color: #4A3F2D;
+    font-size: 13px;
+}
+.gui .MM  #login{
+	background: url("../images/win_MM.png") repeat scroll 0 0 transparent;
+}
+.form-row {
+    clear: both;
+    line-height: 41px;
+    margin-bottom: 1px;
+    overflow: hidden;
+    position: relative;
+    width: 100%;
+}
+.form-row label {
+    float: left;
+    line-height: 41px;
+    padding-right: 12px;
+    text-align: right;
+    width: 140px;
+}
+/******************/
+#tools {
+    -moz-user-select: none;
+}
+#tools .ML, #tools .MM, #tools .MR {
+    height: 236px;
+}
+#tools .TM, #tools .MM, #tools .BM {
+    width: 72px;
+}
+
+#tools .ML, #tools .MM, #tools .MR {
+    height: 426px;
+}
+#tools .ss {
+    color: #444444;
+    height: 50px;
+    left: 8px;
+    position: relative;
+    top: 5px;
+    width: 60px;
+}
+#tools .ss div {
+    font-size: 1px;
+    line-height: 0;
+    width: 36px;
+}
+#tools .ss2 {
+    color: #444444;
+    height: 150px;
+    left: 8px;
+    position: relative;
+    top: 5px;
+    width: 60px;
+}
+#tools .ss2 div {
+    font-size: 1px;
+    line-height: 0;
+    width: 36px;
+}
+#tools .ss2 select{
+    width: 55px;
+}
+#tools .MM div {
+    position: relative;
+}
+#tools .MM .tools div {
+    background: none no-repeat scroll 5px 5px #2B2B2B;
+    border: 1px solid #2F2F2F;
+    cursor: pointer;
+    float: left;
+    height: 26px;
+    margin: 4px;
+    width: 26px;
+}
+#tools .MM div.hr {
+    background: none repeat scroll 0 0 #252525;
+    border: 0 none;
+    height: 1px;
+    margin: 3px 0 2px;
+    width: 100%;
+}
+#tools .MM img {
+    /*display: none;*/
+    padding: 5px;
+    position: absolute;
+}
+#tools .stroke {
+    border: 1px solid #000000;
+    cursor: pointer;
+    left: 18px;
+    position: relative;
+    top: -14px;
+}
+#tools .stroke div {
+    background: none repeat scroll 0 0 #000000;
+    border: 1px solid #FFFFFF;
+    height: 7px;
+    left: 10px;
+    padding: 1px;
+    position: absolute;
+    top: 7px;
+    width: 12px;
+}
+#tools .stroke div div {
+    background: none repeat scroll 0 0 #FFFFFF;
+    border: 0 none;
+    height: 7px;
+    left: 1px;
+    padding: 0;
+    top: 1px;
+    width: 12px;
+}
+#tools .stroke img {
+    cursor: pointer;
+    left: -17px;
+    opacity: 0.75;
+    padding: 0;
+    position: absolute;
+    top: 11px;
+}
+
+#tools .fill {
+    border: 1px solid #000000;
+    position: relative;
+    z-index: 1;
+}
+canvas#fill, canvas#stroke {
+    background-image: url("../images/op_8x8.gif");
+    border: 1px solid #D8D8D8;
+    cursor: pointer;
+    height: 23px;
+    width: 34px;
+}
+#tools .bounds {
+    width: 108px;
+}
+#tools #swap {
+    color: #D8D8D8;
+    cursor: default;
+    font-size: 11px;
+    left: 42px;
+    position: relative;
+    top: 6px;
+}
+#canvas {
+    width: 833px;
+    z-index: 1;
+}
+#canvas .center {
+    color: #BBBBBB;
+    margin-top: 3px;
+    text-align: center;
+    width: 100%;
+}
+
+#canvas .BR {
+    cursor: se-resize;
+}
+#canvas .TM, #canvas .MM, #canvas .BM {
+    width: 801px;
+}
+#canvas .ML, #canvas .MM, #canvas .MR {
+    height: 600px;
+}
+
+#top {
+    -moz-user-select: none;
+    background: url("../images/top_bg.png") repeat scroll 0 0 transparent;
+    color: #444444;
+    height: 22px;
+    width: 100%;
+    z-index: 1;
+}
+#top .west {
+    float: left;
+    left: 0;
+    position: relative;
+    top: -7px;
+}
+#top .west div.cur {
+    color: #999999;
+}
+#top .west div {
+    color: #666666;
+    cursor: pointer;
+    display: inline;
+    position: relative;
+    top: 12px;
+}
+#top .center {
+    margin: 0 auto;
+    text-align: left;
+    width: 710px;
+}
+#top .east {
+    float: right;
+    font-size: 12px;
+    font-variant: small-caps;
+}
+#top .east div {
+    background: url("../images/top_select.png") repeat-x scroll 0 0 transparent;
+    /*border-left: 1px solid #4E4E4E;
+    border-right: 1px solid #2E2E2E;*/
+    color: #E8E8E8;
+    cursor: pointer;
+    float: left;
+    padding: 3px 10px 4px;
+}
+#top .east div.open {
+    -moz-border-bottom-colors: none;
+    -moz-border-image: none;
+    -moz-border-left-colors: none;
+    -moz-border-right-colors: none;
+    -moz-border-top-colors: none;
+    border-color: -moz-use-text-color #161616 -moz-use-text-color #3E3E3E;
+    border-style: none solid;
+    border-width: 0 1px;
+    padding: 0 4px 0 3px;
+}
+#top .east div.save {
+    -moz-border-bottom-colors: none;
+    -moz-border-image: none;
+    -moz-border-left-colors: none;
+    -moz-border-right-colors: none;
+    -moz-border-top-colors: none;
+    border-color: -moz-use-text-color #161616 -moz-use-text-color #3E3E3E;
+    border-style: none solid;
+    border-width: 0 1px;
+    padding: 0 2px 0 7px;
+}
+#top .east div.cur {
+    background: none repeat scroll 0 0 transparent;
+    border-left: 1px solid #3E3E3E;
+    border-right: 1px solid #161616;
+    color: #888888;
+    padding: 3px 10px 4px;
+}
+#top .east div.save span {
+    background-position: right top;
+}
+#top .east div.open span, #top .east div.save span {
+    background: url("../images/file.png") no-repeat scroll 0 0 transparent;
+    display: block;
+    height: 22px;
+    width: 25px;
+}
+#cBound {
+    height: 600px;
+    left: 16px;
+    overflow: hidden;
+    position: absolute;
+    top: 29px;
+    width: 800px;
+}
+.gui {
+    cursor: move;
+    display: none;
+    left: 0;
+    opacity: 0;
+    position: absolute;
+    top: 0;
+    z-index: 2;
+}
+.gui .TL {
+    background: url("../images/win_LT.png") repeat scroll 0 0 transparent;
+    float: left;
+    height: 26px;
+    width: 16px;
+}
+
+.gui .TM {
+    background: url("../images/win_MT.png") repeat scroll 0 0 transparent;
+    color: #FFFFFF;
+    float: left;
+    font-size: 13px;
+    font-variant: small-caps;
+    height: 20px;
+    padding-top: 6px;
+    text-align: left;
+    width: 75px;
+}
+.gui .TR {
+    background: url("../images/win_RT.png") repeat scroll 0 0 transparent;
+    float: left;
+    height: 26px;
+    width: 16px;
+}
+
+.gui .ML {
+    background: url("../images/win_LM.png") repeat scroll 0 0 transparent;
+    float: left;
+    height: 257px;
+    width: 16px;
+}
+
+.gui .MM {
+    /*background: url("../images/win_MM.png") repeat scroll 0 0 transparent;*/
+    cursor: default;
+    float: left;
+    width: 75px;
+}
+
+.gui .MR {
+    background: url("../images/win_RM.png") repeat scroll 0 0 transparent;
+    float: left;
+    height: 257px;
+    width: 16px;
+}
+
+.gui .BL {
+    background: url("../images/win_LB.png") repeat scroll 0 -22px transparent;
+    float: left;
+    height: 20px;
+    width: 16px;
+}
+.gui .BM {
+    background: url("../images/win_MB.png") repeat scroll 0 -22px transparent;
+    float: left;
+    height: 20px;
+    width: 75px;
+}
+
+.gui .BR {
+    background: url("../images/win_RB.png") repeat scroll -16px -22px transparent;
+    float: left;
+    height: 20px;
+    width: 16px;
+}

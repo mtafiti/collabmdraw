@@ -1,0 +1,133 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+	<title>My FlapJax Drawing App</title>
+	<link rel="stylesheet" type="text/css" href="styles/fdraw.css"  />
+</head>
+<body>
+
+	<div id="top">
+	 <div class="center">
+	  <div style="font-variant: small-caps" class="west">
+	   <div class="cur" id="paint" onmousedown="canvas.mode_sw('paint');" style="left: 12px; top: 10px">paint</div>
+	   <div id="light" onmousedown="canvas.mode_sw('light');" style="left: 24px; top: 10px">light</div>
+	  </div>
+	  <div class="east">
+	   <div style="background: none; border-left: none; border-right:1px solid #161616; height: 22px; padding: 0; cursor: default"></div>
+	   <div onmousedown="win.tab(this,'solid','solid'); if(this.className != 'cur') gui_swatch.toType('CO');" id="isolid" class="">color</div>
+	   <div onmousedown="win.tab(this,'gradient','gradient'); if(this.className != 'cur') gui_swatch.toType('GD');" id="igradient" class="cur">gradient</div>
+	   <div onmousedown="win.tab(this,'pattern','pattern'); if(this.className != 'cur') gui_swatch.toType('PT');" id="ipattern" class="cur">pattern</div>
+	   <div onmousedown="win.tab(this,'swatch',vars[vars.id])" id="iswatch" class="cur">swatch</div>
+	   <div onmousedown="win.tab(this,'history',vars[vars.id])" id="ihistory" class="cur">history</div>
+	   <div onmousedown="win.tab(this,'options',vars[vars.id])" id="ioptions" class="">options</div>
+	   <div style="display:none" class="cur open" onmousedown="canvas.open();"><span></span></div>
+	   <a target="_blank" onclick="window.saveDrawing(); return false;" href="#"><div class="cur save"><span></span></div></a>
+	   <div style="background: none; border-left: none; border: none; border-left:1px solid #3e3e3e; height: 22px; padding: 0; cursor: default"></div>
+	  </div>
+	 </div>
+	</div>
+	
+	<!-- div for tools -->
+	<div class="gui" id="tools" style="left: 119.5px; top: 19px; opacity: 1; display: block;">
+	 <div class="bounds">
+	  <div class="TL"></div>
+	  <div class="TM"><div class="TMM">tools</div></div>
+	  <div class="TR"></div><br>
+	  <div class="ML"></div>
+	  <div onmousedown="noMove();" class="MM">
+	   <div class="z">
+		<div class="tools">
+		 <div onclick="gui_tools.imageCurrent('Marquee_'+vars.marquee)" style="background-image: url('images/Tools.png'); background-position: 5px -229px;" title="Marquee"><img alt="Marquee" class="plus" src="media/gui/sw_add.png"><img alt="Marquee" class="Marquee_lasso Marquee_ellipses Marquee_polygon Marquee_star Marquee_burst Marquee_gear" src=""></div>
+		 <div onclick="gui_tools.imageCurrent('Crop')" style="background-image: url('images/Tools.png'); background-position: 5px -47px;" title="Crop"><img alt="Crop" class="Crop" src=""></div><br>
+		 <div class="hr"></div>
+		 <div onclick="gui_tools.imageCurrent('Text')" style="background-image: url('images/Tools.png'); background-position: 5px -593px;" title="Text"><img alt="Text" class="Text" src=""></div>
+		 <div onclick="gui_tools.imageCurrent('Shape_'+vars.shape)" style="background-image: url('images/Tools.png'); background-position: 5px -437px;" title="Shape"><img alt="Shape" class="plus" src="media/gui/sw_add.png"><img alt="Shape" class="Shape_ellipses Shape_polygon Shape_star Shape_burst Shape_gear" src=""></div>
+		 <div onclick="gui_tools.imageCurrent('Spirograph')" style="background-image: url('images/Tools.png'); background-position: 5px -645px;" title="Spirograph"><img alt="Spirograph" class="Spirograph" src=""></div>
+		 <div onclick="gui_tools.imageCurrent(vars.draw)" style="background-position: 5px 5px;" title="Brush"><img alt="Draw" class="plus" src="media/gui/sw_add.png" style="display: none;"><img alt="Draw" class="Brush Calligraphy Pencil" src="images/Brush_2.png" style="width: 40px; height: 40px; top: -12.5px; left: -12.5px; display: block;"></div>
+		 <div onclick="gui_tools.imageCurrent('Fill')" style="background-image: url('images/Tools.png'); background-position: 5px -99px;" title="Fill"><img alt="Fill" class="Fill" src=""></div>
+		 <div onclick="gui_tools.imageCurrent('Stamp')" style="background-image: url('images/Tools.png'); background-position: 5px -567px;" title="Stamp"><img alt="Stamp" class="Stamp" src=""></div>
+		 <div onclick="gui_tools.imageCurrent('Eraser')" style="background-image: url('images/Tools.png'); background-position: 5px -73px;" title="Eraser"><img alt="Eraser" class="Eraser" src=""></div>
+		 <div onclick="gui_tools.imageCurrent('Picker')" style="background-image: url('images/Tools.png'); background-position: 5px -359px;" title="Picker"><img alt="Picker" class="Picker" src=""></div>
+		 <br>
+		 <div class="hr"></div>
+		</div>
+		<div class="ss">
+		 <div id="swap">F</div>
+		 <div class="fill" style="z-index: 2; cursor: default;">
+		  <canvas title="Fill" id="fill" onmousedown="gui_palette.click('fill')" width="34" height="23" style="cursor: default;"></canvas>
+		 </div>
+		 <div class="stroke" style="z-index: 1; cursor: pointer;">
+		  <canvas title="Stroke" id="stroke" onmousedown="gui_palette.click('stroke')" width="34" height="23" style="cursor: pointer;"></canvas>
+		  <div onmousedown="gui_palette.click('stroke')"><div></div></div>
+		  <img alt="Switch Stroke with Fill" onmousedown="gui_palette.current(); return false" style="display: block" src="images/sw_switch.png">
+		 </div>
+		</div>
+	   </div>
+	  </div>
+	  <div class="MR"></div><br>
+	  <div class="BL"></div>
+	  <div class="BM"></div>
+	  <div class="BR"></div>
+	 </div>
+	</div>
+	<!-- the canvas -->
+	
+	<div style="width: 732px; height: 615px; left: 212.5px; top: 19px; opacity: 1; display: block;" class="gui" onmousedown="core.fu('canvas',event,{fu:core.win,Y1:19})" id="canvas">
+	 <div class="TL"></div>
+	 <div ondblclick="win_size.tog(vars.winMax?'min':'max')" class="TM" style="width: 700px;">
+	  <div class="center">
+	   <span id="cTitle">DRAWING.PNG</span>
+	  </div>
+	  <div id="cZoom" class="east"></div>
+	 </div>
+	 <div class="TR"></div><br>
+	 <div class="ML" style="height: 575px;"></div>
+	 <div class="MM" style="height: 575px; width: 700px;">
+	  <div class="z">
+	<!--    <div onmousedown="return(noMove())" id="cBound" style="height: 575px; width: 700px; cursor: crosshair;">
+		<canvas style="z-index: 1; left: 0px; top: 0px;" id="ctx_box" width="700" height="575"></canvas>
+		<canvas style="z-index: 2; left: 0px; top: 0px;" id="ctx_temp" width="700" height="575"></canvas>
+		<canvas style="z-index: 5; left: 0px; top: 0px;" id="ctx_active" width="700" height="575"></canvas>
+		<canvas style="z-index: 6; left: 0px; top: 0px;" id="ctx_marquee" width="700" height="575"></canvas>
+		<canvas style="z-index: 7; left: 0px; top: 0px;" id="ctx_mouse" width="700" height="575"></canvas> 
+	   </div>
+	   <canvas height="50" width="50" id="ctx_brush"></canvas>
+	   <canvas height="200" width="200" id="ctx_stamp"></canvas>
+	   <canvas height="200" width="200" id="ctx_eraser"></canvas>
+	   <canvas width="1" height="1" id="ctx_picker"></canvas>
+	    <div id="cHistory"><canvas height="575" width="700" id="history_0"></canvas>
+		   <canvas height="575" width="700" id="history_1"></canvas>
+		   <canvas height="575" width="700" id="history_2"></canvas>
+		   <canvas height="575" width="700" id="history_3"></canvas>
+		   <canvas height="575" width="700" id="history_4"></canvas>
+		   <canvas height="575" width="700" id="history_5"></canvas>
+		   <canvas height="575" width="700" id="history_6"></canvas>
+		   <canvas height="575" width="700" id="history_7"></canvas>
+		   <canvas height="575" width="700" id="history_8"></canvas>
+		   <canvas height="575" width="700" id="history_9"></canvas>
+		   <canvas height="575" width="700" id="history_10"></canvas>
+		   <canvas height="575" width="700" id="history_11"></canvas>
+		   <canvas height="575" width="700" id="history_12"></canvas>
+		   <canvas height="575" width="700" id="history_13"></canvas>
+		   <canvas height="575" width="700" id="history_14"></canvas>
+		   <canvas height="575" width="700" id="history_15"></canvas>
+		   <canvas height="575" width="700" id="history_16"></canvas>
+		   <canvas height="575" width="700" id="history_17"></canvas>
+		   <canvas height="575" width="700" id="history_18"></canvas>
+		   <canvas height="575" width="700" id="history_19"></canvas>
+		   <canvas height="575" width="700" id="history_20"></canvas>
+		   <canvas height="575" width="700" id="history_21"></canvas>
+		   <canvas height="575" width="700" id="history_22"></canvas>
+		   <canvas height="575" width="700" id="history_23"></canvas>
+		   <canvas height="575" width="700" id="history_24"></canvas>
+		   <canvas height="575" width="700" id="history_25"></canvas>
+	   </div> -->
+	  </div>
+	 </div>
+	 <div class="MR" style="height: 575px;"></div><br>
+	 <div class="BL"></div>
+	 <div class="BM" style="width: 700px;"></div>
+	 <div onmousedown="vars.winMax='min'; win_size.core(event)" class="BR"></div>
+	</div>
+	
+</html>
