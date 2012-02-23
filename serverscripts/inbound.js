@@ -4,7 +4,8 @@ var net = require('net'),
 //the socket
 var socket;
 //midas host
-var midasHost = "127.0.0.1", midasPort = 4337, inboundName = '', file='rules.midas';
+var midasHost = "127.0.0.1", midasPort = 4337, inboundName = '', 
+	file='G:/Masters/Second Year/Thesis/Work/Project/draw/serverscripts/jsrules.clp';
 
 function connect(host, port, name, callback){
 
@@ -19,11 +20,12 @@ function connect(host, port, name, callback){
 	
 	socket.on('connect', function() {
 		console.log('Inbound "'+inboundName+'" socket to midas created on '+midasHost+ ':'+midasPort);
-		reset();
+		
 		register();
+		reset();
 		
 		//load file
-		//loadFile();
+		loadFile();
 		
 		if (callback && typeof callback === 'function'){
 			callback();
@@ -39,7 +41,7 @@ function connect(host, port, name, callback){
 	  console.dir(err);
 	});
 	socket.on('end', function() {
-	  console.log("M>> "+'DONE. Connection closed.');
+	  console.log("M>> "+'[Note] Midas Connection closed.');
 	});
 }
 //add and send code to midas
@@ -86,10 +88,11 @@ function reset(){
 function stop(){
 	addCode("(stop-midas) ");
 }
-function loadFile(){
-	addCode('(load "'+file+'")');
+function loadFile(theFile){
+	addCode('(load "'+(theFile || file)+'")');
 }
 
+exports.loadFile = loadFile;
 exports.addCode = addCode;
 exports.add = add;
 exports.reset = reset;

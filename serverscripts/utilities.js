@@ -85,8 +85,12 @@ function uuidCompact() {
 	});
 }
 
-/* modified version of string.split that keeps the
-* delimiters. nb: cuts after the delimiter
+/** 
+*	function split2 
+*	Modified version of string.split that keeps the
+* 	delimiters. nb: cuts after the delimiter
+*	@param str: the string
+*	@param delim: the delimiter for the split
 */
 function split2(str, delim){
 	if (typeof str !== 'string'){

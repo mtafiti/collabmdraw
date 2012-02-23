@@ -4,58 +4,58 @@
 	<title>My Drawing App</title>
 	<link rel="stylesheet" type="text/css" href="styles/fdraw.css"  />
 	<script src="scripts/fdraw.js"></script>
-	<script type="text/javascript" src="http://192.168.1.9:8000/faye.js"></script>
-	<script type="text/javascript" language="javascript">
-		//decode get request var
-		function getQueryString(name){
-		   if(name=(new RegExp('[?&]'+encodeURIComponent(name)+'=([^&]*)')).exec(location.search))
-			  return decodeURIComponent(name[1]);
-		}
-	</script>
+	<script src="scripts/utils.js"></script>
+	<script src="scripts/gfproxy.js"></script>
 	
-	<script type="text/javascript" language="javascript">	
-		
-		var client = new Faye.Client('http://192.168.1.9:8000/faye');					
-		
+	<script src="http://192.168.1.6:8000/socket.io/socket.io.js"></script>
+	
+	<script type="text/javascript" language="javascript">
+		var HOST = '192.168.1.6:8000';
+		var io_config = {
+			transports: [ 'websocket']
+			//,reconnect: false
+		};
+		var roomsocket = io.connect('http://'+HOST+'/rooms'),
+			leadersocket = io.connect('http://'+HOST+'/leader');
+
 		var rname = getQueryString('rname');
 		var nickname = getQueryString('nick');
 		setNames(rname,nickname);		
-		var channel = '/faye/rooms/'+rname;
-		var subscription = client.subscribe(channel, function(data) {
+		
+		roomsocket.on('device connected', function (reply) {
+			console.info(reply.msg);
+		});
+		roomsocket.on('joined', function (reply) {	
+			console.info(reply.msg);
+		});
+		roomsocket.on('msg', function (msg) {	
+			console.info(msg);
+		});
+		//join the room
+		roomsocket.emit('join room', {'rname':rname});
+		//message from device in room received
+		roomsocket.on('message', function(data) {						
 			// handle data. contains shape: rect and mouseevt: evt		
 			//ignore my updates - can also do this in server as faye extension			
-			if (data.drawid === client.getClientId())
-				return;					
-			//console.info("Edit info detected from sum1 on shape: " + data.shape.shpid);						
+			//if (data.drawid === client.getClientId())
+			//	return;								
 			processDistData(data);
 		});
-		//have successfully connected
-		subscription.callback(function() {
-		  console.info('Subscription to faye server is now active.');
-		});		
 		
 		//load the session, if any
 		loadSession();
 		
-		//function to publish change
 		function publishChange(data){
 			//may need to detect if the data is from current client
 			//thus, add id
-			data.drawid = client.getClientId();
+			//data.drawid = client.getClientId();
+		
 			data.rname = rname;
-			client.publish(channel, data);
+			roomsocket.emit('room_send',data);
 		}
 		
-		//gestures
-		var gchannel = '/faye/gestures';
-		var subscription2 = client.subscribe(gchannel, function(msg) {
-			//
-		});
-		subscription2.callback(function() {
-		  console.info('Subscription to gestures successful.');
-		});		
 		function publishGesture(msg){
-			client.publish(gchannel,msg);
+			//leadersocket.emit('event raised',msg);
 		}
 	</script>
 </head>

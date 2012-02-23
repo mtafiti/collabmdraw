@@ -1,7 +1,14 @@
 
+/** 
+*	the drawing application 
+*/
+
 (function (window) {
-
-
+	//2 hash tables: for localrefs and for remoterefs
+	var localRefsTable = {}, farRefsTable = {};
+	//the gfProxy
+	var gfproxy;
+		
 	//my nickname
 	var nick = '';
 	var rname = '';
@@ -77,6 +84,9 @@
 	//added for distribution
 	var isDistEvent = false;
 	
+
+	
+	
 	// Box object to hold data
 	function SelHandle(x,y,w,h) {
 	  this.x = x||0;
@@ -102,7 +112,7 @@
 		this.type = 'rect';
 		
 		//unique id
-		this.shpid = generateRandomID();
+		this.shpid = generateRandomID('SHP-');
 	  	  
 		//selection handles for each box
 		this.selectionhandles = new Array();
@@ -805,20 +815,50 @@ function init2() {
   // make mainDraw() fire every INTERVAL milliseconds
   setInterval(mainDraw, INTERVAL);
 
-  // set our events. Up and down are for dragging,
-  // double click is for making new boxes
-  canvas.onmousedown = myDown;
-  canvas.onmouseup = myUp;
-  canvas.ondblclick = myDblClick;
-  canvas.onmousemove = myMove;
+  //the events
+  var o = {
+		md: myDown,
+		mu: myUp,
+		mm: myMove,
+		seq:{
+			invoked: [{			
+					fn: "md",
+					args: [],
+					receiver:''
+				},
+				{			
+					fn: "mu",
+					args: [],
+					receiver:''
+				}
+			],
+			callback: function(args) {
+				//dosthng		
+			}
+		}
+  };
+	//make it a group object
+	groupObject(o);
+  
+  canvas.onmousedown = o.md;
+  canvas.onmouseup = o.mu;
+  //canvas.ondblclick = myDblClick;
+  canvas.onmousemove = o.mm;
   
   //enter name
   var txt = document.createTextNode(nick|| 'Anon');
 	document.getElementById('username1').appendChild(txt);
 	
-	//default status
+	//default status - selecting mode
 	setCurrentDraw('');
 	
+	//add get and put to the tables
+	tableMixin.call(farRefsTable);
+	tableMixin.call(localRefsTable);
+	//add 'read' in table
+	fTableMixin.call(farRefsTable);
+	//add 'write' in objects
+	lRefsMixin.call(Box2.prototype, localRefsTable, farRefsTable);
 }
 
 
@@ -1096,6 +1136,7 @@ function myUp(e){
 
 // adds a new node
 function myDblClick(e) {
+	debugger;
 	getMouse(e);
 	// for this method width and height determine the starting X and Y, too.
 	// are vars in case we wanted to make them args/global for varying sizes
@@ -1369,73 +1410,9 @@ function processDistData(data)
 		//was added due to inconsistencies with socket.io/faye
 		if(!found)
 		{
-			//TODO - SEND TYPE OVER WIRE OR NOT?
+			//TODO - send type?
 		   var rect = addShape(data.shape.x, data.shape.y, data.shape.w, data.shape.h, data.shape.fill, false, data.shape.shpid,data.shape.type,data.shape.strokecolor, data.shape.strokewidth);
 		}
-		
-		/* TODO: DELETE THIS PART
-        //anyway, if you are dragging, then change mode to resize
-        if (isDrag)
-        {           
-			//set the selection handle
-			for (var i=0; i<boxes2.length; i++){
-				var box = boxes2[i];
-				//check if its the same box, in order to update
-				if (box.shpid !== data.shape.shpid)
-					continue;							
-				
-				//calculations for resize - to simulate pinch
-				var left1 = box.x;
-				var top1 = box.y;				
-				var halfx = left1 + (box.w/2);
-				var halfy = top1 + (box.h/2);
-				var right1 = left1 + box.w;							
-				var bottom1 = top1 + box.h;
-
-				//check if the mouse is within the bounds of rect, 
-				//(note; also allow if it passes by an offset)
-				var offset = 50;
-				if (mx >= (left1 - offset) && mx <= (right1 + offset) && my >= (top1-offset) && my <= (bottom1 + offset)) {			
-					if (box.selected) {
-						//set the status todo: find a better way to set them..
-						isDrag = false;
-						isResizeDrag = true;
-						isDistEvent = true;
-						
-						//if so, select the nearest selection box
-						//calculations - determine if the mouse is within the bounds of the shape
-						var selhandles = new Array();
-						selhandles.push({x: left1,y: top1});	//sel0
-						selhandles.push({x: halfx,y: top1});	//sel1
-						selhandles.push({x: right1,y: top1});	//sel2
-						selhandles.push({x: left1, y: halfy});	//sel3
-						selhandles.push({x: right1, y: halfy});	//sel4
-						selhandles.push({x: left1,y: bottom1});	//sel5
-						selhandles.push({x: halfx, y: bottom1});	//sel6
-						selhandles.push({x: right1,y:bottom1});	//sel7
-						
-						//get the eucl. distance to determine.. 
-						//..how near the remote mouse is to the sel handles
-						var leastDist = 99999, idx = -1;
-						for (var i=0; i<selhandles.length; i++){
-							var handle = selhandles[i];
-							var dist = Math.sqrt((mx - handle.x) *(mx - handle.x) + (my - handle.y) * (my - handle.y));
-							//check least dist, also idx
-							//idx now holds the current nearest selection handle index
-							if (dist < leastDist){
-									leastDist = dist;
-									idx = i;
-							}
-						}
-						//end of loop, so next draw update will use that selection handle
-						//to resze shape
-						expectResize = idx;					
-		
-					}
-				}
-			}
-		}
-		*/
 		//	invalidate the canvas!
 		invalidate();
 	}
@@ -1583,21 +1560,118 @@ function loadShapesFromJson(json){
 function setNames(roomname,nickname){
 	rname = roomname||''; nick = nickname||'';
 }
-// ------------- Utility function to generate random IDs --------------
- function generateRandomID(start, length){
-	//default length -> 15
-	if (!length)
-	length = 15;
+
+/**
+	Mixins to add localrefs/farrefs functionality
+*/
+var tableMixin = function(){
+	this.get = function(key){				
+		return this[key];
+	};
+	this.put = function(key,val){
+		this[key] = val;
+	};
+};
+/**
+	Mixin local/far ref semantics to table
+	Presumption: all bjects in system have ids
+	@param lTable: the local objects table
+	@param fTable: the far refs table
+*/
+var lRefsMixin = function(lTable,fTable){	
+	this.write = function(){
+		if (!lTable){
+			return null;
+		}
+		if (!this.farid){
+			this.farid =  generateRandomID('FAR-');
+		}
+		//store in local refs
+		lTable.put(this.shpid,this.farid);
+		//create in far refs
+		fTable.put(this.farid, this.shpid);		
+		//return far ref
+		return this.farid;
+	};
+};
+/**
+	Mixin for far ref table to get local ref id
+*/
+var fTableMixin = function(){	
+	this.read = function(farRefID){		
+		//get the localid of the far ref
+		var lid = this.get(farRefID);
+		if (!lid){
+			return '';
+		}		
+		return lid;		
+	}
+};
+/**
+	function groupObject: constructor function
+	@param config: the object describing the config for the group object
+*/
+function groupObject(obj){
+	var properties, propertiesStr, invokeArr, preds, i, l, inv, pred, seq;
+	
+	if ( !obj.seq || !obj.seq.invoked )
+		return obj;
+		
+	//get propertynames as an array
+	//properties = Object.getOwnPropertyNames(o);			
+	//filter fns only - filter has to exist
+	//properties = properties.filter(function(prop){ return typeof prop === "function"; });
+	
+	//see if only one predicate is defined
+	invokeArr = (obj.seq.invoked instanceof Array) === true ? obj.seq.invoked : [obj.seq.invoked];
+	
+	gfproxy = gfProxyInit(leadersocket, localRefsTable, farRefsTable);
+	
+	preds = [];	
+	
+	
+	//create config, after making predicates
+	for ( i = 0, l = invokeArr.length; i < l; i++ ){		 
+		inv = invokeArr[i];
+		pred = new gfproxy.Predicate(inv.name || "Pred"+i, inv.fn, inv.args, inv.receiver);
+		preds.push(pred);
+	}
+	//start by creating a new sequence object
+	seq = new gfproxy.Sequence("Seq1", preds, inv.callback);	//TODO: remove hard-coded name
+	
+	//TODO: where...?
+	gfproxy.sendConfigToServer(seq);
+	
+	//now add the actual proxy
+	gfproxy.intercept(obj);
+}
+// ----------------------
+/** 
+	generateRandomID: Utility function to generate random IDs
+	@param: start - an optional starting string for the id
+*/
+ function generateRandomID(start){
+	//array of xters to use
+	var CHARS = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'.split('');	
+	
 	if(!start)
-		start = "SHP";
-  var chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";//"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";
-  var randomstring='';
-  for(x=0;x<length;x++)
-  {
-    var rnum = Math.floor(Math.random() * chars.length);
-    randomstring += chars.substring(rnum,rnum+1);
-  }
-  return start+randomstring;
+		start = "SHP-";
+	
+	var chars = CHARS, uuid = new Array(36), rnd=0, r;
+	for (var i = 0; i < 36; i++) {
+		if (i==8 || i==13 ||  i==18 || i==23) {
+			uuid[i] = '-';
+		} else if (i==14) {
+			uuid[i] = '4';
+		} else {
+			if (rnd <= 0x02) rnd = 0x2000000 + (Math.random()*0x1000000)|0;
+			r = rnd & 0xf;
+			rnd = rnd >> 4;
+			uuid[i] = chars[(i == 19) ? (r & 0x3) | 0x8 : r];
+		}
+	}
+	
+	return start+uuid.join('');	
 }
 //  generate random color
 //  returns a hex string for color
@@ -1615,8 +1689,8 @@ function remoteCall(url, args, responseCallback) {
 	http.open("POST", url, true);
 	
 	http.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
-	http.setRequestHeader("Content-length", args.length);
-	http.setRequestHeader("Connection", "close");
+	//http.setRequestHeader("Content-length", args.length);
+	//http.setRequestHeader("Connection", "close");
 
 	
 	http.onreadystatechange = function() {
@@ -1631,7 +1705,7 @@ function remoteCall(url, args, responseCallback) {
 		};
 	};
 	http.send(args);
-};
+}
 
 // -------------- external functions -------------------------
 

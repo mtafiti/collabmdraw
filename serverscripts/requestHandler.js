@@ -13,7 +13,7 @@ function upload(response) {
   response.end();
 }
 function servefile(response,filePath){
-	 console.log("Request handler 'fileserver' was called.");
+	 //console.log("Request handler 'fileserver' was called.");
 	 
 	 //var filePath =  request.url;
 	var extname = path.extname(filePath);
@@ -31,6 +31,12 @@ function servefile(response,filePath){
 			break;
 		case '.ico':
 			contentType = 'image/x-icon';
+			break;
+		case '.png':
+			contentType = 'image/png';
+			break;
+		case '.gif':
+			contentType = 'image/gif';
 			break;
 	}
 	
@@ -80,7 +86,7 @@ function ajax(response,request, rooms){
 		  fullparams += chunk;		 		  
 		});
 		
-		//phew.. now serve params		
+		//finished getting post data.. now serve params		
 		request.on('end', function(){
 			
 			var postparams = querystring.parse(fullparams);
@@ -109,6 +115,8 @@ function ajax(response,request, rooms){
 						}
 					});									
 					break;
+				default:
+					break;
 			}
 			
 			response.writeHead(200, { 'Content-Type': "application/json" });
@@ -122,7 +130,7 @@ function ajax(response,request, rooms){
 		{
 			pathname = pathname.substring(pathname.indexOf('?')+1,pathname.length);
 		}
-		console.log("Request handler 'ajax' was called. pathname:"+pathname);
+		//console.log("Request handler 'ajax' was called. pathname:"+pathname);
 		
 		//split multiple parameters
 		var params = querystring.parse(pathname);					
@@ -131,6 +139,7 @@ function ajax(response,request, rooms){
 		
 		switch (params.request){
 			case 'loadrooms':
+				console.dir(rooms);
 				content = JSON.stringify(rooms);
 				break;		
 		}		
