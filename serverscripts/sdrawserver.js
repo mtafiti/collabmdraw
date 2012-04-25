@@ -31,8 +31,7 @@ function start(route, handle){
 	
 	//reduce debug messages of io
 	io.set('log level', 1);
-	//io.set('transports', ['websocket','flashsocket']);	// enable some transports
-	
+
 	//the rooms channel
 	var rooms = io
 	  .of('/rooms')
@@ -75,7 +74,7 @@ function start(route, handle){
 					return;
 				}
 				//now send to devices in room
-				console.log(socket.id+' about to broadcast data to room: ' + socketRoom);
+				//console.log(socket.id+' about to broadcast '+data.eventType+ ' data to room: ' + socketRoom);
 				socket.broadcast.json.to(name).send(data);
 			});			
 		});
@@ -94,34 +93,30 @@ function start(route, handle){
 			msg: 'Device connected to leader'
 		});
 		*/
-		socket.on('register_sequence', function (data, cbname, returnfn) {	  
-		
-			//TODO: cliend id needed?
-			midas.publish(data);	
-			console.log("registering a sequence..");
-			console.dir(data);
-			midas.subscribe(cbname, function(data){
-				//at this point midas has identified a cb sequence
-				//TODO: need to send data back to clients
-				console.log("Event raised in midas: ");
-				console.dir(data);
-				returnfn(data);
+		socket.on('register_sequence', function (data, seqname, returnfn) {	  
+				
+			midas.publishSequenceConfig(data, seqname, function(invokes){
+				//at this point midas has identified a cb sequence				
+				//get room name, then send to ppl in room
+				socket.get('roomname', function (err, name) {					
+					//now send to devices in room					
+					socket.broadcast.json.to(name).emit('sequence_callback',invokes);
+					//console.log("Sequence callback called. data: ");
+					//console.dir(invokes);					
+				});	
+				
 			});
-			//wait for feedback, or timeout??
-			
-		  })
+			//finished registering sequence
+			returnfn({msg: 'Registered sequence successfully'});
+		  });
 		  socket.on('fn_invoked', function (data, returnfn) {	  
 				
-				//TODO: cliend id needed?
-				midas.publish({type: 'Invoke','name': data.fn, args: data.args, reciever:  data.rec});
-				
-				//wait for feedback, or timeout
-				//TODO: how to connect this to the callback above
-				
-				//then call the fn
-				returnfn('functionality incomplete');
+				midas.publishInvoke(data,socket.id, function(data){
+							//return the result to client
+							returnfn(data);
+						});			
 		  });
-	  });	  
+	  });
 	  
 	//start socket connection to midas
 	midas.start();

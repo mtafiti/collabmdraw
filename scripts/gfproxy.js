@@ -1,60 +1,61 @@
 
-/** proxy. original concept inspired by Darren Schnare, MIT
-	@param client - the socket binding to the server
-*/
-var gfProxyInit = (function(leadersocket,lTable, fTable) {
-
-	var SEQ_TIME_LIMIT = 500;
+/**
+		proxy that takes over a grp object.
+		@param leadersocket - the socket that proxy will use to send invoke info to leader
+	*/
+var gfProxyInit = (function(leadersocket) {
+	//the sequence waiting time in milliseconds
+	var SEQ_TIME_LIMIT = 400;
 	
+	//info message has been sent from server. right now just log it.
 	leadersocket.on('msg', function (msg) {	
 			//callback from proxy channel
-			console.info("Published from proxy channel:");
+			console.info("Published from leader channel:");
 			console.dir(msg);
 	});	
 	
 	/**
-		proxy function that sends to server an interception has happened
+		proxy function that sends to server that an interception has happened
 		@param fn - the function being intercepted
 		@param invoked - the invoked array for the sequence
-		@param seqcb: the callback of the sequence, incase this function activates it
+		@param allArgs - the 'arguments' array of the invoked function
 	*/
-	function proxyFunction(fn, invoked, seqcb){
+	function proxyFunction(fn, invoked, allArgs){	
+		
 		var interception = {
 			'fn': invoked.fn,
 			args: invoked.args,
-			rec: invoked.reciever,
-			cid: leadersocket.id
+			argmap: '',//allArgs,
+			rec: invoked.receiver || 'none'
 		};
-	
-		//send event to leader/server. can add client id here
-		leadersocket.emit('fn_invoked', interception, function (data) {
-			//TODO:check if server returns normally or a sequence has been realised
+		
+		fn();
+		/*leadersocket.emit('fn_invoked', interception, function (data) {			
 			
-			//First convert arguments into local objects
-			fn();
-			//Then, to call the normail(invoked) function call fn.
-			//To invoke the sequence callback, cal seqcb
-			console.log(data); 
+			if (!data.isseqcb){				
+				//To call the normal (invoked) function call: fn.
+				fn();
+			}					
 		});
+		*/
 	}
 	/**
 		send the seq config to server to create necessary templates/rule(s)
-		@param obj: the object
-		@param invokeArr: the array of configs
+		@param invokeArr: the array of sequence invoke configs
+		@param seqcb: the the sequence callback object
 	*/
-	function sendConfigToServer(seq){
-		var obj = [], i, l, inv;		
-		
-		//write
-		var str = seq.write();
-		var seqname = seq.name;
+	function sendConfigToServer(invokes, seqcb){
 		
 		//send event to leader/server. can add client id here
-		leadersocket.emit('register_sequence', str, seqname, function (msg) {
-			
+		leadersocket.emit('register_sequence', invokes, seqcb.name, function (msg) {		
+			//output the results
 			console.log(msg); 
 		});
 		
+		//when a sequence has been detected...
+		leadersocket.on('sequence_callback',function(data){			
+			seqcb.fn.call(null, data);
+		});
 	}
 	
 	/**
@@ -87,7 +88,7 @@ var gfProxyInit = (function(leadersocket,lTable, fTable) {
 					//remember scope could be lost, so use self var as scope
 					//debugger;
 					return fun.apply(self, args);
-					}, val, seqcb);
+					}, val, args);
 				}
 			})(inv,func);
 		}
@@ -120,158 +121,9 @@ var gfProxyInit = (function(leadersocket,lTable, fTable) {
 		}
 	})();
 	
-	/** 
-	*	ajax remote POST call
-	*	@param url: the url
-	*	@param args: the args to send
-	*	@param responseCallback	the callback fn
+	/** proxy. inspired by Darren Schnare's aopjs, MIT
+		@param obj - object to be proxied
 	*/
-	function remoteCall(url, args, responseCallback) {
-		http = new XMLHttpRequest();
-		http.open("POST", url, true);
-		
-		http.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
-		http.setRequestHeader("Content-length", args.length);
-		http.setRequestHeader("Connection", "close");
-
-		
-		http.onreadystatechange = function() {
-			if (http.readyState === 4) {
-				 if (http.status === 200) {  
-					var response = JSON.parse(http.responseText);
-					responseCallback(response);  
-				} else {  
-				  console.log("Error", http.statusText);  
-				} 
-				
-			};
-		};
-		http.send(args);
-	};
-	
-	//-------------- predicates -----------------------
-	/**
-	Predicate - constructor function for a rule within a sequence
-	@param name: the name of the predicate
-	@param fnname: the name of the invoked function
-	@param args: an array of the arguments of the function
-	@param receiver: the receiver of the function invocation
-	*/
-	var Predicate = function (name, fnname, args, receiver){
-		this.name = name;				//the name
-		this.fnName = fnname;			//the fn name
-		this.receiver = receiver;		//the reciever
-		this.args = args				//the args of the fn
-		//this.client = client || '';	//the clientid
-		
-		/** 
-			write function
-		*/
-		this.write = function(){
-			var str = ''; 
-			str += " ?"+ this.name ;
-			str += " <- (Invoke ";
-			str += " (name "+this.fnName+" ) ";		//only constant			
-			str += " (args $?args_"+this.fnName+" ) "; 
-			str += " (on ?on"+"_"+this.fnName+ " ) ";
-			str += " (receiver  ?receiver_"+this.fnName+" ) ";	//rest are variables to be bound
-			str += " ) ";
-			
-			var refs="";
-			//check if we have references to local objects, 
-			//then convert to far refs
-
-			if (this.args instanceof Array){	//TODO: confirm this
-				//convert to far refs
-				for (var i = 0, l = this.args.length; i < l; i++){
-					var temp = this.args[i];
-					
-					if ((typeof temp === 'object') && (typeof temp.write === 'function'))
-						temp = temp.write();
-					refs = refs + temp +" ";
-				}
-			}else {
-				refs = this.args;
-			}
-			str += this.args ? 
-				'(test (eq (create$ '+refs+') ?args_'+this.fnName+' ) )'
-				: '';
-			str += this.receiver ? 
-				'(test (eq '+this.receiver+' ?receiver_'+this.fnName+' )) '
-				: '';
-			
-			return str;
-		}						
-	};
-	/**
-	Sequence - constructor function for a sequence
-	@param name: the name of the predicate
-	@param fnname: the name of the invoked function
-	@param args: an array of the arguments of the function
-	@param receiver: the receiver of the function invocation
-	*/
-	var Sequence = function (name, predicates, callback){
-		this.name = 'Sequence_'+name;	//will be used to subscribe for the callback, in the server
-		this.predicates = predicates;
-		this.callback = callback;
-		
-		// create the template for this sequence
-		var templatestr = '';
-		templatestr += '( deftemplate '+this.name+' (multislot args) ) ';
-		
-		//create the rule string
-		var rulestr ='';
-		rulestr +='(defrule Invoke_'+this.name+' ';
-		
-		this.write = function(){
-			var lhsstr = '', rhsstr = '';
-			
-			//string to test within some time limit
-			var onstr = '(test (< (- ';
-			var onmaxstr = '(max ';
-			var onminstr = '(min ';
-			
-			rhsstr += '(assert ('+this.name+ ' (args ';	//or can do a concat of fn names
-			//first, define all templates of the predicates
-			for (var i = 0, l = this.predicates.length; i < l; i++){
-				var pred = this.predicates[i];
-				//templatestr += ' (deftemplate '+pred.fnName+' ';
-				//templatestr += ' (slot name) (slot args) (slot receiver) (slot on)';					
-				//templatestr += ' )';
-				
-				//build the pred rule
-				lhsstr += pred.write();
-				//test within timeframe
-				onmaxstr += " ?on_"+pred.fnName; 
-				onminstr += " ?on_"+pred.fnName; 
-				//build the rhs for this pred
-				rhsstr += ' (create$ '+pred.fnName;
-				rhsstr += ' (create$ '+pred.args.join(" ")+')';	//args
-				rhsstr += pred.receiver+' )';	//reciever
-			}
-			
-			rhsstr += ' ) ) )';
-			
-			onmaxstr += ' )';
-			onminstr += ' )';
-			
-			//build time limit str
-			onstr += onmaxstr + onminstr + " ) "+SEQ_TIME_LIMIT+" ) ) ";
-			//add to lhs
-			lhsstr += onstr;
-			
-			//build rule string
-			rulestr += lhsstr + " => " + rhsstr;
-			rulestr += ' ) ';
-			
-			//now build the entire string
-			var str = templatestr + rulestr;
-			
-			return str;
-		};		
-		
-	};
-	
 	return {
 		intercept: function (obj){
 			var properties, propertiesStr, invokeArr, i, l;
@@ -289,9 +141,7 @@ var gfProxyInit = (function(leadersocket,lTable, fTable) {
 			applyInterceptions(obj, invokeArr);
 			
 		},
-		'sendConfigToServer': sendConfigToServer,
-		'Predicate': Predicate,
-		'Sequence': Sequence
+		'sendConfigToServer': sendConfigToServer
 	};
 	
 });

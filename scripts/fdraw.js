@@ -1,6 +1,6 @@
 
 /** 
-*	the drawing application 
+*	kDraw - collaborative drawing application
 */
 
 (function (window) {
@@ -14,7 +14,7 @@
 	var rname = '';
 	
 	// holds all our boxes
-	var boxes2 = [];
+	var allshapes = [];
 
 	// New, holds the 8 tiny boxes that will be our selection handles
 	// the selection handles will be in this order:
@@ -79,15 +79,10 @@
 	var selectionStartX;                // Stores the x coordinate of where the user started drawing the selection rectangle
 	var selectionStartY;                // Stores the y coordinate of where the user started drawing the selection rectangle
 	var selectionEndX;                  // Stores the x coordinate of the end of the current selection rectangle
-	var selectionEndY;                  // Stores the y coordinate of the end of the current selection rectangle
-
-	//added for distribution
-	var isDistEvent = false;
-	
-
+	var selectionEndY;                  // Stores the y coordinate of the end of the current selection rectangle	
 	
 	
-	// Box object to hold data
+	// shape object to hold data
 	function SelHandle(x,y,w,h) {
 	  this.x = x||0;
 	  this.y = y||0;
@@ -98,8 +93,8 @@
 	  this.strokecolor = getRandomColor(); //'#444444';
 	}
 
-	// Box object to hold data
-	function Box2(x,y,w,h) {
+	// shape object to hold data
+	function ShapeObj(x,y,w,h) {
 		this.x = x||0;
 		this.y = y||0;
 		this.w = w||1; // default width and height?
@@ -108,13 +103,16 @@
 		this.fill = shapeFill; //'#444444';
 		this.strokecolor = shapeBorderColor; 
 		this.strokewidth = shapeBorderWidth;	
-		//added this later for distribution
-		this.type = 'rect';
+		
+		this.type = 'rect';		
 		
 		//unique id
 		this.shpid = generateRandomID('SHP-');
+		
+		//grp id
+		this.group = -1;
 	  	  
-		//selection handles for each box
+		//selection handles for each shape
 		this.selectionhandles = new Array();
 	  
 		for (var i = 0; i < 8; i ++) {
@@ -123,131 +121,131 @@
 		}
 	}
 
-	// Box 'class'
-	Box2.prototype = {
-	  // each box is responsible for its own drawing
-	  // mainDraw() will call this with the normal canvas
-	  // myDown will call this
-	  draw: function (context) {
-		var i = 0;
-		  context.fillStyle = this.fill;
+	// Shapes 'class'
+	ShapeObj.prototype = {
+		  // each shape is responsible for its own drawing
+		  // mainDraw() will call this with the normal canvas
+		  // myDown will call this
+		  draw: function (context) {
+			var i = 0;
+			  context.fillStyle = this.fill;
 
-		  // can skip the drawing of elements that have moved off the screen:
-		  if (this.x > WIDTH || this.y > HEIGHT) { return; }
-		  if (this.x + this.w < 0 || this.y + this.h < 0) { return; }
+			  // can skip the drawing of elements that have moved off the screen:
+			  if (this.x > WIDTH || this.y > HEIGHT) { return; }
+			  if (this.x + this.w < 0 || this.y + this.h < 0) { return; }
 
-			context.strokeStyle = this.strokecolor;
-			context.lineWidth = this.strokewidth;
-			if (this.fill){
-				context.fillRect(this.x, this.y, this.w, this.h);
-			}
-			//draw default outline
-			if (!this.selected) {
-				context.strokeRect(this.x, this.y, this.w, this.h);
-			}
-		// draw selection
-		// this is a stroke along the box and also 8 new selection handles
-
-			if (this.selected) {
-			  context.strokeStyle = mySelColor;
-			  context.lineWidth = mySelWidth;
-			  context.strokeRect(this.x, this.y, this.w, this.h);
-
-			  // draw the boxes
-
-			  var half = mySelBoxSize / 2;
-
-			  // 0  1  2
-			  // 3     4
-			  // 5  6  7
-
-			  // top left, middle, right
-			  this.selectionhandles[0].x = this.x - half;
-			   this.selectionhandles[0].y = this.y - half;
-
-			  this.selectionhandles[1].x = this.x + this.w / 2 - half;
-			  this.selectionhandles[1].y = this.y - half;
-
-			  this.selectionhandles[2].x = this.x + this.w - half;
-			  this.selectionhandles[2].y = this.y - half;
-
-			  //middle left
-			  this.selectionhandles[3].x = this.x - half;
-			  this.selectionhandles[3].y = this.y + this.h / 2 - half;
-
-			  //middle right
-			  this.selectionhandles[4].x = this.x + this.w - half;
-			  this.selectionhandles[4].y = this.y + this.h / 2 - half;
-
-			  //bottom left, middle, right
-			  this.selectionhandles[6].x = this.x + this.w / 2 - half;
-			  this.selectionhandles[6].y = this.y + this.h - half;
-
-			  this.selectionhandles[5].x = this.x - half;
-			  this.selectionhandles[5].y = this.y + this.h - half;
-
-			  this.selectionhandles[7].x = this.x + this.w - half;
-			  this.selectionhandles[7].y = this.y + this.h - half;
-
-
-			  context.fillStyle = mySelBoxColor;
-			  for (i = 0; i < 8; i++) {
-				var cur = this.selectionhandles[i];
-				context.fillRect(cur.x, cur.y, mySelBoxSize, mySelBoxSize);
-			  }
-			}
-	  }, // end draw	  
-	  resize: function(handle){
-		var oldx = this.x;
-		var oldy = this.y;
-		var newx = oldx - mx;	//TODO: global
-		var newy = oldy - my;	//TODO: global
-	  
-		switch (handle) {			
-				  case 0:
-					this.x = mx;
-					this.y = my;
-					this.w += newx;
-					this.h += newy;
-					break;
-				  case 1:
-					this.y = my;
-					this.h += newy;
-					break;
-				  case 2:
-					this.y = my;
-					this.w = mx - oldx;
-					this.h += oldy - my;
-					break;
-				  case 3:
-					this.x = mx;
-					this.w += oldx - mx;
-					break;
-				  case 4:
-					this.w = mx - oldx;
-					break;
-				  case 5:
-					this.x = mx;
-					this.w += oldx - mx;
-					this.h = my - oldy;
-					break;
-				  case 6:
-					this.h = my - oldy;
-					break;
-				  case 7:
-					this.w = mx - oldx;
-					this.h = my - oldy;
-					break;
+				context.strokeStyle = this.strokecolor;
+				context.lineWidth = this.strokewidth;
+				if (this.fill){
+					context.fillRect(this.x, this.y, this.w, this.h);
 				}
-                 //if any value of width or height is -ve 
-				 //set minimum width, height
-                 if(this.w < 5){
-                     this.w = 10;          
+				//draw default outline
+				if (!this.selected) {
+					context.strokeRect(this.x, this.y, this.w, this.h);
 				}
-                 if(this.h < 5){                
-                     this.h = 10;
-				}				               
-	  },
+			// draw selection
+			// this is a stroke along the _shape and also 8 new selection handles
+
+				if (this.selected) {
+				  context.strokeStyle = mySelColor;
+				  context.lineWidth = mySelWidth;
+				  context.strokeRect(this.x, this.y, this.w, this.h);
+
+				  // draw the boxes
+
+				  var half = mySelBoxSize / 2;
+
+				  // 0  1  2
+				  // 3     4
+				  // 5  6  7
+
+				  // top left, middle, right
+				  this.selectionhandles[0].x = this.x - half;
+				   this.selectionhandles[0].y = this.y - half;
+
+				  this.selectionhandles[1].x = this.x + this.w / 2 - half;
+				  this.selectionhandles[1].y = this.y - half;
+
+				  this.selectionhandles[2].x = this.x + this.w - half;
+				  this.selectionhandles[2].y = this.y - half;
+
+				  //middle left
+				  this.selectionhandles[3].x = this.x - half;
+				  this.selectionhandles[3].y = this.y + this.h / 2 - half;
+
+				  //middle right
+				  this.selectionhandles[4].x = this.x + this.w - half;
+				  this.selectionhandles[4].y = this.y + this.h / 2 - half;
+
+				  //bottom left, middle, right
+				  this.selectionhandles[6].x = this.x + this.w / 2 - half;
+				  this.selectionhandles[6].y = this.y + this.h - half;
+
+				  this.selectionhandles[5].x = this.x - half;
+				  this.selectionhandles[5].y = this.y + this.h - half;
+
+				  this.selectionhandles[7].x = this.x + this.w - half;
+				  this.selectionhandles[7].y = this.y + this.h - half;
+
+
+				  context.fillStyle = mySelBoxColor;
+				  for (i = 0; i < 8; i++) {
+					var cur = this.selectionhandles[i];
+					context.fillRect(cur.x, cur.y, mySelBoxSize, mySelBoxSize);
+				  }
+				}
+		  }, // end draw	  
+		  resize: function(handle){
+			var oldx = this.x;
+			var oldy = this.y;
+			var newx = oldx - mx;	//TODO: global
+			var newy = oldy - my;	//TODO: global
+		  
+			switch (handle) {			
+					  case 0:
+						this.x = mx;
+						this.y = my;
+						this.w += newx;
+						this.h += newy;
+						break;
+					  case 1:
+						this.y = my;
+						this.h += newy;
+						break;
+					  case 2:
+						this.y = my;
+						this.w = mx - oldx;
+						this.h += oldy - my;
+						break;
+					  case 3:
+						this.x = mx;
+						this.w += oldx - mx;
+						break;
+					  case 4:
+						this.w = mx - oldx;
+						break;
+					  case 5:
+						this.x = mx;
+						this.w += oldx - mx;
+						this.h = my - oldy;
+						break;
+					  case 6:
+						this.h = my - oldy;
+						break;
+					  case 7:
+						this.w = mx - oldx;
+						this.h = my - oldy;
+						break;
+					}
+					 //if any value of width or height is -ve 
+					 //set minimum width, height
+					 if(this.w < 5){
+						 this.w = 10;          
+					}
+					 if(this.h < 5){                
+						 this.h = 10;
+					}				               
+		  },
 		//get the index of the selected handle of this shape, or -1 if none
 		getSelectedHandle: function(mx,my){
 
@@ -263,21 +261,35 @@
 				}
 			}
 			return -1;
-	  },
-	  //is this box hit?
-	  isHit: function(mouseX,mouseY){
-		 // Determine if the box was clicked
-		var left1 = this.x;
-		var right1 = left1 + this.w;
-		var top1 = this.y;
-		var bottom1 = this.y + this.h;
+		},
+		//is this shape hit?
+		isHit: function(mouseX,mouseY){
+			 // Determine if the shape was clicked
+			var left1 = this.x;
+			var right1 = left1 + this.w;
+			var top1 = this.y;
+			var bottom1 = this.y + this.h;
 
-		if (mouseX >= left1 && mouseX <= right1 && mouseY >= top1 && mouseY <= bottom1) {
-			return true;
-		}else {
-			return false;
-		}		
-	  }
+				if (mouseX >= left1 && mouseX <= right1 && mouseY >= top1 && mouseY <= bottom1) {
+					return true;
+				}else {
+					return false;
+				}		
+		},
+		select: function(){			
+			this.selected = true;
+		},
+		groupSelect: function(grpid){
+			this.group = grpid;
+			this.selected = true;
+		},
+		unselect: function(){
+			this.group = "";
+			this.selected = false;
+		},
+		isSelected: function(){
+			return this.selected;
+		}
 	};
 
 	/*
@@ -287,7 +299,7 @@
 	//An ellipse
 	function Ellipse(x,y,w,h){
 		
-	  var ellipse = new Box2(x,y,w,h);
+	  var ellipse = new ShapeObj(x,y,w,h);
 	  ellipse.type = 'ellipse';
 	  // draw ellipse function. from: 
 	  // http://stackoverflow.com/questions/2172798/how-to-draw-an-oval-in-html5-canvas
@@ -331,7 +343,7 @@
 				drawEllipse(context,ellipse.x,ellipse.y,ellipse.w,ellipse.h);
 			}else{
 			// draw selection
-			// this is a stroke along the box and also 8 new selection handles			
+			// this is a stroke along the shape and also 8 new selection handles			
 			  context.strokeStyle = mySelColor;
 			  context.lineWidth = mySelWidth;
 			  //context.strokeRect(ellipse.x, ellipse.y, ellipse.w, ellipse.h);
@@ -455,7 +467,7 @@
 	//An crect
 	function CRectangle(x,y,w,h){
 		
-	  var crect = new Box2(x,y,w,h);
+	  var crect = new ShapeObj(x,y,w,h);
 	  crect.type = 'crect';
 	  // draw rect function. from: 
 	  // http://stackoverflow.com/questions/2172798/how-to-draw-an-oval-in-html5-canvas
@@ -497,7 +509,7 @@
 				drawRoundRect(context,crect.x,crect.y,crect.w,crect.h);
 			}else{
 			// draw selection
-			// this is a stroke along the box and also 8 new selection handles			
+			// this is a stroke along the shape and also 8 new selection handles			
 			  context.strokeStyle = mySelColor;
 			  context.lineWidth = mySelWidth;
 			  //context.strokeRect(crect.x, crect.y, crect.w, crect.h);
@@ -620,9 +632,9 @@
 	
 	
 	//for a line, a bit different
-	// Box object to hold data
+	// shape object to hold data
 	function Line(x,y,w,h) {
-		var line = new Box2(x,y,w,h);
+		var line = new ShapeObj(x,y,w,h);
 		line.type = 'line';
 		
 		//specialized draw function
@@ -690,31 +702,7 @@
 					line.h = my - oldy;
 					//line.w = -newx;
 					//line.h = -newy;
-					break;
-				 /* case 2:
-					line.y = my;
-					line.w = mx - oldx;
-					line.h += oldy - my;
-					break;
-				  case 3:
-					line.x = mx;
-					line.w += oldx - mx;
-					break;
-				  case 4:
-					line.w = mx - oldx;
-					break;
-				  case 5:
-					line.x = mx;
-					line.w += oldx - mx;
-					line.h = my - oldy;
-					break;
-				  case 6:
-					line.h = my - oldy;
-					break;
-				  case 7:
-					line.w = mx - oldx;
-					line.h = my - oldy;
-					break;*/
+					break;				
 				}               			
 		};
 		/* 
@@ -738,7 +726,7 @@
 			}
 			return ret;	
 		};
-		// Determine if the box was clicked
+		// Determine if the shape was clicked
 		line.isHit = function(mouseX,mouseY){		
 			var hitdistance = getHitDist(mouseX,mouseY);
 				
@@ -752,7 +740,7 @@
 	  return line; //return line
 	}
 	
-//used to easiy initialize a new Box, 
+//used to easiy initialize a new shape, 
 //add it, and invalidate the canvas
 function addShape(x, y, w, h, fill, sel, rectid, type, strokecol, strokew) {
   var rect;
@@ -767,7 +755,7 @@ function addShape(x, y, w, h, fill, sel, rectid, type, strokecol, strokew) {
 		rect = new CRectangle(x,y,w,h);
 		break;
 	case 'rect': default:
-		rect = new Box2(x,y,w,h);
+		rect = new ShapeObj(x,y,w,h);
 		break;
   }
 
@@ -781,12 +769,12 @@ function addShape(x, y, w, h, fill, sel, rectid, type, strokecol, strokew) {
 	
   rect.strokecolor = strokecol || shapeBorderColor;
   rect.strokewidth = strokew || shapeBorderWidth;
-  rect.selected = sel;
+  if (sel) { rect.select(); } else { rect.unselect(); }
 
   //shape id
   rect.shpid = rectid || rect.shpid;
 
-  boxes2.push(rect);
+  allshapes.push(rect);
   invalidate();
   return rect;
 }
@@ -824,16 +812,21 @@ function init2() {
 			invoked: [{			
 					fn: "md",
 					args: [],
-					receiver:''
+					receiver: ''
 				},
 				{			
 					fn: "mu",
 					args: [],
-					receiver:''
+					receiver: ''
 				}
 			],
-			callback: function(args) {
-				//dosthng		
+			callback: {
+				name: "mdmu",
+				fn: function(args) {
+					//dosthng
+					console.log("Sequence callback called.");
+					console.dir(args);									
+				}
 			}
 		}
   };
@@ -851,14 +844,6 @@ function init2() {
 	
 	//default status - selecting mode
 	setCurrentDraw('');
-	
-	//add get and put to the tables
-	tableMixin.call(farRefsTable);
-	tableMixin.call(localRefsTable);
-	//add 'read' in table
-	fTableMixin.call(farRefsTable);
-	//add 'write' in objects
-	lRefsMixin.call(Box2.prototype, localRefsTable, farRefsTable);
 }
 
 
@@ -877,10 +862,10 @@ function mainDraw() {
     // stuff to be drawn in the background all the time
 
     // draw all boxes
-    var l = boxes2.length;
+    var l = allshapes.length;
 	
     for (var i = 0; i < l; i++) {
-      boxes2[i].draw(ctx); // each box draws itself
+      allshapes[i].draw(ctx); // each shape draws itself
     }
 
     // can add stuff you want drawn on top all the time here
@@ -923,12 +908,12 @@ function myMove(e){
 	
 	//move means we are updating sthng that is selected,
 	//so report this to others, in case they are doing same thing to a shape
-	for (var i=0; i<boxes2.length; i++){
-		var box = boxes2[i];
-		if (box.selected){
-			box.x = box.x + changeInX;
-			box.y = box.y + changeInY;
-			publishDistData('editshape',e,box);
+	for (var i=0; i<allshapes.length; i++){
+		var _shape = allshapes[i];
+		if (_shape.selected){
+			_shape.x = _shape.x + changeInX;
+			_shape.y = _shape.y + changeInY;
+			publishDistData('editshape',e,_shape);
 		}
 	}
     // something is changing position so invalidate the canvas
@@ -936,18 +921,18 @@ function myMove(e){
 
   } else if (isResizeDrag) {
     // time to resize
-	 for (var i=0; i<boxes2.length; i++){
-			var box = boxes2[i];
-			 if (box.selected){
-				var oldx = box.x;
-				var oldy = box.y;
+	 for (var i=0; i<allshapes.length; i++){
+			var _shape = allshapes[i];
+			 if (_shape.isSelected()){
+				var oldx = _shape.x;
+				var oldy = _shape.y;
                 var newx = oldx - mx;
                 var newy = oldy - my;
 				// 0  1  2
 				// 3     4
 				// 5  6  7
-				box.resize(expectResize);				
-                publishDistData('editshape',e,box);  //can create a new state for resize..                                                       
+				_shape.resize(expectResize);				
+                publishDistData('editshape',e,_shape);  //can create a new state for resize..                                                       
 				//for now use editshape
 				invalidate();
 			
@@ -1004,7 +989,7 @@ function myMove(e){
 			return;
 		}			
 	}
-    // not over a selection box, return to normal
+    // not over a selection shape, return to normal
     isResizeDrag = false;
 	//no selection handle hit
     expectResize = -1;
@@ -1029,31 +1014,31 @@ function myDown(e){
 	
 	publishMouseEvent(e,BIRTH);
 	
-	//check if we are over a selection box
+	//check if we are over a selection shape
 	if (expectResize !== -1) {
 		isResizeDrag = true;
 		return;
 	}
 
-	var l = boxes2.length;
+	var l = allshapes.length;
 
 	//loop - check what has been hit
 	for (var i = l-1; i >= 0; i--) {
-		var box = boxes2[i];
+		var _shape = allshapes[i];
 		
 		/*
-		 // Determine if the box was clicked
-		 // to draw over a shape: (box.isHit(mx,my) && !isDrawing)
+		 // Determine if the _shape was clicked
+		 // to draw over a shape: (_shape.isHit(mx,my) && !isDrawing)
 		*/
-		if (box.isHit(mx,my)&& !isDrawing){
-			// we hit a box!
-			// if this box is not selected then select it only
+		if (_shape.isHit(mx,my)&& !isDrawing){
+			// we hit a shape!
+			// if this shape is not selected then select it only
 			// since we are sure this is not a multi select here
 			
-			if (!box.selected ) {
+			if (!_shape.isSelected()) {
 				clearSelectedBoxes();
 			}
-			box.selected = true;
+			_shape.select();
 			isDrag= true;
 			invalidate();			
 			return;
@@ -1105,12 +1090,6 @@ function myUp(e){
 	//report to midas
 	publishMouseEvent(e,DEATH);
 	
-	if (isDistEvent && isResizeDrag)
-	{
-		//notify the rest you stopped "pinching"
-		//console.info("someone ruined my pinch!");
-		isDistEvent = false;
-	}
 	isDrag = false;
 	isResizeDrag = false;
 	
@@ -1152,25 +1131,37 @@ function myDblClick(e) {
 function invalidate() {
   canvasValid = false;
 }
-//checks if any box is selected
+//checks if any _shape is selected
 function isAnyBoxSelected()
 {
-	for (var i=0; i<boxes2.length; i++)
+	for (var i=0; i<allshapes.length; i++)
 	{
-		if (boxes2[i].selected)
+		if (allshapes[i].isSelected())
 			return true;
 	}
 	return false;
 }
-
-// Clear all selected boxes
+/**
+ * function clearSelectedBoxes: Clear all selected boxes
+ *
+**/
 function clearSelectedBoxes()
 {
-	for (var i=0; i<boxes2.length; i++)
+	//store the 
+	var shpids = [];
+	
+	for (var i=0; i<allshapes.length; i++)
 	{
-		boxes2[i].selected = false;
+		if (allshapes[i].isSelected()){
+			allshapes[i].unselect();
+			shpids.push(allshapes[i].shpid);
+		}
 	}
 	invalidate();
+	//distribute, only if it was a group selection
+	if (shpids.length > 1){
+		publishChange({eventType: 'ungroupshapes', shapes: shpids});
+	}
 }
 
 //untested function
@@ -1178,17 +1169,17 @@ function deleteSelectedBoxes(){
 
 	//here we replace selected boxes with nulls - not to mess with indices..	
 	var idxs = new Array();
-	for (var i=0, l=boxes2.length; i < l; i++)
+	for (var i=0, l=allshapes.length; i < l; i++)
 	{	
-		var thebox = boxes2[i];
-		if (thebox.selected)
+		var thebox = allshapes[i];
+		if (thebox.isSelected())
 		{
 			publishDistData('delshape',null,{shpid: thebox.shpid} ); 
-			boxes2.splice(i,1,null);	//insert a null val			
+			allshapes.splice(i,1,null);	//insert a null val			
 		}
 	}
 	//..then remove the nulls
-	boxes2 = boxes2.filter(function(val) { 
+	allshapes = allshapes.filter(function(val) { 
 		return val !== null; 
 	});
 
@@ -1198,24 +1189,24 @@ function deleteAllBoxes(){
 
 	//here we replace selected boxes with nulls - not to mess with indices..	
 	var idxs = new Array();
-	for (var i=0, l=boxes2.length; i < l; i++)
+	for (var i=0, l=allshapes.length; i < l; i++)
 	{	
-		var thebox = boxes2[i];		
+		var thebox = allshapes[i];		
 		publishDistData('delshape',null,{shpid: thebox.shpid} ); 
-		boxes2.splice(i,1,null);	//insert a null val			
+		allshapes.splice(i,1,null);	//insert a null val			
 	}
 	//..then reset the array
-	boxes2 = [];
+	allshapes = [];
 	invalidate();
 }
-// Get box of id
+// Get _shape of id
 function getBox(shpid)
 {
-		for (var i=0; i<boxes2.length; i++)
+		for (var i=0; i<allshapes.length; i++)
 		{
-			var box = boxes2[i];
-			if (box.shpid == shpid)
-				return box;
+			var _shape = allshapes[i];
+			if (_shape.shpid == shpid)
+				return _shape;
 		}
 		return {};	//check
 }
@@ -1223,18 +1214,18 @@ function getBox(shpid)
 function getSelectedBoxes()
 {
 		var arr = new Array();
-		for (var i=0; i<boxes2.length; i++)
+		for (var i=0; i<allshapes.length; i++)
 		{
-			var box = boxes2[i];
-			if (box.selected)
-				arr.push(box);
+			var _shape = allshapes[i];
+			if (_shape.isSelected())
+				arr.push(_shape);
 		}
 		return arr;
 }
 //select all boxes
 function selectAllBoxes(){
-	boxes2.forEach(function(box){
-		box.selected = true;
+	allshapes.forEach(function(_shape){
+		_shape.select();
 	});
 	invalidate();
 }
@@ -1314,7 +1305,7 @@ function drawSelectionRectangle(context) {
 	context.lineWidth = sw;
 }
 
-// See if box is in the user dragged rectangle
+// See if _shape is in the user dragged rectangle
 function selectShapesInRectangle() {
 
 	// Get the bounds of the drawn rectangle
@@ -1323,22 +1314,40 @@ function selectShapesInRectangle() {
 	var selectionLeft = Math.min(selectionStartX, selectionEndX);
 	var selectionRight = Math.max(selectionStartX, selectionEndX);
 
+	var selshapes = []; 	//selected shapes
+	
 	// Loop through all the boxes and select if it lies within the
 	// bounds of the rectangle
-	for (var i = 0; i < boxes2.length; i++) {
-		var box = boxes2[i];
+	for (var i = 0; i < allshapes.length; i++) {
+		var _shape = allshapes[i];
 
-		var boxTop = box.y;
-		var boxBottom = box.y + box.h;
-		var boxLeft = box.x;
-		var boxRight = box.x + box.w;
+		var boxTop = _shape.y;
+		var boxBottom = _shape.y + _shape.h;
+		var boxLeft = _shape.x;
+		var boxRight = _shape.x + _shape.w;
 
 		if (boxTop >= selectionTop && boxBottom <= selectionBottom && boxLeft >= selectionLeft && boxRight <= selectionRight)
 		{
-			//select the box
-			box.selected = true;
+			//add to selected shapes array
+			selshapes.push(_shape);
 		}
 	}
+	
+	//here we check if more than one shapes are selected
+	//so we group them
+	switch (selshapes.length){
+		case 0:
+			return;
+		break;
+			
+		case 1:
+			selshapes[0].select();
+		break;
+		
+		default:	//put all in one group
+			groupShapes(selshapes);
+		break;		
+	}	
 }
 function publishDistData(evtType,e,data, state)
 {
@@ -1379,81 +1388,89 @@ function processDistData(data)
 		_my = data.mousexy[1];
 	}
 	
-	if (data.eventType === 'addshape')
-	{
-		// for this method width and height determine the starting X and Y, too.
-		var width = 20;		//can make these a parameter in UI
-		var height = 20;
-		var rect = addShape(_mx - (width / 2), _my - (height / 2), width, height, data.shape.fill, false, data.shape.shpid,data.shape.type, data.shape.strokecolor, data.shape.strokewidth);
-	}
-	
-	if (data.eventType === 'editshape')
-	{
-		//fallback to see if shape being updated is not in local canvas, so we recreate it
-		//ideally this should not happen
-		var found =false;
-        for (var i=0; i<boxes2.length; i++){
-            var box = boxes2[i];
-            if (box.shpid === data.shape.shpid){
-                    box.x = data.shape.x;
-                    box.y = data.shape.y;
-                    box.w = data.shape.w;
-                    box.h = data.shape.h;
-                    box.fill = data.shape.fill;
-                    box.strokewidth = data.shape.strokewidth;
-                    box.strokecolor = data.shape.strokecolor;
-					found= true;
-					break;
-            }
-        }		
-		//if the shape is not there, create it. again, this should not be necessary
-		//was added due to inconsistencies with socket.io/faye
-		if(!found)
-		{
-			//TODO - send type?
-		   var rect = addShape(data.shape.x, data.shape.y, data.shape.w, data.shape.h, data.shape.fill, false, data.shape.shpid,data.shape.type,data.shape.strokecolor, data.shape.strokewidth);
-		}
-		//	invalidate the canvas!
-		invalidate();
-	}
-	/*
-	if (data.eventType === 'nopinch')
-	{
-		//pinch finished by other party
-		//by releasing drag by mouse-up - resume dragging
-		if (isResizeDrag)
-		{
-			isResizeDrag = false;
-			expectResize = -1;	
-			isDrag = true;		
-			invalidate();
-		}
-		
-	}
-	*/
-	if (data.eventType === 'delshape'){
-		//do the same to delete the boxes
-		var j;
-		for (j=0, l=boxes2.length ; j < l; j++){
-				var box = boxes2[j];
-				if (box.shpid === data.shape.shpid){
-					boxes2.splice(j,1);
-					invalidate();
-					break;
+	switch (data.eventType){
+		case 'addshape':{
+				// for this method width and height determine the starting X and Y, too.
+				var width = 20;		//can make these a parameter in UI
+				var height = 20;
+				var rect = addShape(_mx - (width / 2), _my - (height / 2), width, height, data.shape.fill, false, data.shape.shpid,data.shape.type, data.shape.strokecolor, data.shape.strokewidth);
+			}
+		break;
+		case 'editshape':{
+				//fallback to see if shape being updated is not in local canvas, so we recreate it
+				//ideally this should not happen
+				var found =false;
+				for (var i=0; i<allshapes.length; i++){
+					var _shape = allshapes[i];
+					if (_shape.shpid === data.shape.shpid){
+							_shape.x = data.shape.x;
+							_shape.y = data.shape.y;
+							_shape.w = data.shape.w;
+							_shape.h = data.shape.h;
+							_shape.fill = data.shape.fill;
+							_shape.strokewidth = data.shape.strokewidth;
+							_shape.strokecolor = data.shape.strokecolor;
+							found= true;
+							break;
+					}
+				}		
+				//if the shape is not there, create it. again, this should not be necessary
+				//was added due to inconsistencies with socket.io/faye
+				if(!found)
+				{
+					//TODO - send type?
+				   var rect = addShape(data.shape.x, data.shape.y, data.shape.w, data.shape.h, data.shape.fill, false, data.shape.shpid,data.shape.type,data.shape.strokecolor, data.shape.strokewidth);
 				}
-		}
-	}
-	if (data.eventType === 'editshapeprops'){
-		var thebox = getBox(data.shape.shpid);
-		if (thebox){
-			thebox.fill  = data.shape.fill;
-			thebox.strokecolor  = data.shape.strokecolor;
-			thebox.strokewidth  = data.shape.strokewidth;
-			invalidate();
-		}
+				//	invalidate the canvas!
+				invalidate();
+			}
+		break;
+		case 'delshape': {
+				//do the same to delete the boxes
+				var j;
+				for (j=0, l=allshapes.length ; j < l; j++){
+						var _shape = allshapes[j];
+						if (_shape.shpid === data.shape.shpid){
+							allshapes.splice(j,1);
+							invalidate();
+							break;
+						}
+				}
+			}
+		break;
+		case 'editshapeprops':{
+				var thebox = getBox(data.shape.shpid);
+				if (thebox){
+					thebox.fill  = data.shape.fill;
+					thebox.strokecolor  = data.shape.strokecolor;
+					thebox.strokewidth  = data.shape.strokewidth;
+					invalidate();
+				}
+			}
+		break;
+		case 'groupshapes':{			
+				data.shapes.forEach(function (shapeid){
+					var shape = getBox(shapeid);
+					if (!shape)
+						return;
+					shape.group = data.group;
+				});
+			}
+		break;
+		case 'ungroupshapes':{
+				data.shapes.forEach(function (shapeid){
+					var shape = getBox(shapeid);
+					if (!shape)
+						return;
+					shape.group = "";
+				});
+			}
+		break;
 	}
 }
-/* publish each gesture. gtype is either BIRTH, MOVE or DEATH */
+/**
+ * publish each gesture. gtype is either BIRTH, MOVE or DEATH 
+ */ 
 function publishMouseEvent(e, gtype){
 	//calculate the relative x,y
 	var mxy = normalizeMouseXY(e);
@@ -1469,10 +1486,10 @@ function changeFill(col){
 	var selboxes = getSelectedBoxes();
 	if (selboxes.length> 0){
 		for (var i=0; i<selboxes.length; i++){
-			var box = selboxes[i];
-			box.fill = col;			
+			var _shape = selboxes[i];
+			_shape.fill = col;			
 			//distribute
-			publishDistData('editshapeprops',null,{shpid: box.shpid, fill: box.fill, strokecolor: box.strokecolor, strokewidth: box.strokewidth} );
+			publishDistData('editshapeprops',null,{shpid: _shape.shpid, fill: _shape.fill, strokecolor: _shape.strokecolor, strokewidth: _shape.strokewidth} );
 		}
 		invalidate();
 	}
@@ -1483,10 +1500,10 @@ function changeBorderColor(col){
 	var selboxes = getSelectedBoxes();
 	if (selboxes.length> 0){
 		for (var i=0; i<selboxes.length; i++){
-			var box = selboxes[i];
-			box.strokecolor = col;			
+			var _shape = selboxes[i];
+			_shape.strokecolor = col;			
 			//distribute
-			publishDistData('editshapeprops',null,{shpid: box.shpid, fill: box.fill, strokecolor: box.strokecolor, strokewidth: box.strokewidth} );
+			publishDistData('editshapeprops',null,{shpid: _shape.shpid, fill: _shape.fill, strokecolor: _shape.strokecolor, strokewidth: _shape.strokewidth} );
 		}
 		invalidate();
 	}
@@ -1508,10 +1525,10 @@ function changeBorderWidth(width){
 	var selboxes = getSelectedBoxes();
 	if (selboxes.length> 0){
 		for (var i=0; i<selboxes.length; i++){
-			var box = selboxes[i];
-			box.strokewidth = shapeBorderWidth;			
+			var _shape = selboxes[i];
+			_shape.strokewidth = shapeBorderWidth;			
 			//distribute
-			publishDistData('editshapeprops',null,{shpid: box.shpid, fill: box.fill, strokecolor: box.strokecolor, strokewidth: box.strokewidth} );
+			publishDistData('editshapeprops',null,{shpid: _shape.shpid, fill: _shape.fill, strokecolor: _shape.strokecolor, strokewidth: _shape.strokewidth} );
 		}
 		invalidate();
 	}
@@ -1522,9 +1539,9 @@ function saveSession(){
 	//ajax call
 	//remote call for rooms
 	//clone shapes
-	var boxes3 = boxes2.map(function(box){
-		return {x: box.x, y: box.y, w: box.w, h: box.h, fill: box.fill, 
-						shpid: box.shpid, type:box.type, strokecolor: box.strokecolor, strokewidth: box.strokewidth};
+	var boxes3 = allshapes.map(function(_shape){
+		return {x: _shape.x, y: _shape.y, w: _shape.w, h: _shape.h, fill: _shape.fill, 
+						shpid: _shape.shpid, type:_shape.type, strokecolor: _shape.strokecolor, strokewidth: _shape.strokewidth};
 	});
 	//stringify
 	var boxesJson = JSON.stringify(boxes3);
@@ -1562,52 +1579,6 @@ function setNames(roomname,nickname){
 }
 
 /**
-	Mixins to add localrefs/farrefs functionality
-*/
-var tableMixin = function(){
-	this.get = function(key){				
-		return this[key];
-	};
-	this.put = function(key,val){
-		this[key] = val;
-	};
-};
-/**
-	Mixin local/far ref semantics to table
-	Presumption: all bjects in system have ids
-	@param lTable: the local objects table
-	@param fTable: the far refs table
-*/
-var lRefsMixin = function(lTable,fTable){	
-	this.write = function(){
-		if (!lTable){
-			return null;
-		}
-		if (!this.farid){
-			this.farid =  generateRandomID('FAR-');
-		}
-		//store in local refs
-		lTable.put(this.shpid,this.farid);
-		//create in far refs
-		fTable.put(this.farid, this.shpid);		
-		//return far ref
-		return this.farid;
-	};
-};
-/**
-	Mixin for far ref table to get local ref id
-*/
-var fTableMixin = function(){	
-	this.read = function(farRefID){		
-		//get the localid of the far ref
-		var lid = this.get(farRefID);
-		if (!lid){
-			return '';
-		}		
-		return lid;		
-	}
-};
-/**
 	function groupObject: constructor function
 	@param config: the object describing the config for the group object
 */
@@ -1627,24 +1598,33 @@ function groupObject(obj){
 	
 	gfproxy = gfProxyInit(leadersocket, localRefsTable, farRefsTable);
 	
-	preds = [];	
-	
-	
-	//create config, after making predicates
-	for ( i = 0, l = invokeArr.length; i < l; i++ ){		 
-		inv = invokeArr[i];
-		pred = new gfproxy.Predicate(inv.name || "Pred"+i, inv.fn, inv.args, inv.receiver);
-		preds.push(pred);
-	}
-	//start by creating a new sequence object
-	seq = new gfproxy.Sequence("Seq1", preds, inv.callback);	//TODO: remove hard-coded name
-	
 	//TODO: where...?
-	gfproxy.sendConfigToServer(seq);
+	gfproxy.sendConfigToServer(invokeArr, obj.seq.callback);
 	
 	//now add the actual proxy
 	gfproxy.intercept(obj);
 }
+/**
+ * function groupShapes - add shapes to group, publishes the action
+ *	@param shapes - the shapes to add to a new group
+ *  @returns the new group id
+ */
+ function groupShapes(shapes){
+	//new group id
+	var grpid = generateRandomID("GRP-");
+	var shpids = [];
+	shapes.forEach(function (shape){
+		//select only if it has no group id 
+		if (shape.group === ""){
+			shape.select();
+			shape.group = grpid;
+			//add to array to publish later
+			shpids.push(shape.shpid);
+		}
+	});
+	//publish this directly using publish change
+	publishChange({eventType: 'groupshapes', group: grpid, shapes: shpids});
+ }
 // ----------------------
 /** 
 	generateRandomID: Utility function to generate random IDs
@@ -1683,7 +1663,12 @@ function getRandomColor() {
     }
     return color;
 }
-//remote POST call
+	/** 
+	*	ajax remote POST call
+	*	@param url: the url
+	*	@param args: the args to send
+	*	@param responseCallback	the callback fn
+	*/
 function remoteCall(url, args, responseCallback) {
 	http = new XMLHttpRequest();
 	http.open("POST", url, true);

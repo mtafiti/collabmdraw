@@ -101,7 +101,7 @@ function split2(str, delim){
 	var newarr = newstringreplaced.split("¬");
 	//remove null/empty elms
 	newarr = newarr.filter(function(item){
-		return (item != null && item !== '');
+		return (item != null && item !== '' && item!= 'undefined');
 	});
 	return newarr;
 }

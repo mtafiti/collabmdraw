@@ -10,11 +10,7 @@
 	<script src="http://192.168.1.6:8000/socket.io/socket.io.js"></script>
 	
 	<script type="text/javascript" language="javascript">
-		var HOST = '192.168.1.6:8000';
-		var io_config = {
-			transports: [ 'websocket']
-			//,reconnect: false
-		};
+		var HOST = '192.168.1.6:8000';	// 169.254.142.69 change also the socketio ip
 		var roomsocket = io.connect('http://'+HOST+'/rooms'),
 			leadersocket = io.connect('http://'+HOST+'/leader');
 
@@ -48,8 +44,7 @@
 		function publishChange(data){
 			//may need to detect if the data is from current client
 			//thus, add id
-			//data.drawid = client.getClientId();
-		
+			//data.drawid = client.getClientId();		
 			data.rname = rname;
 			roomsocket.emit('room_send',data);
 		}

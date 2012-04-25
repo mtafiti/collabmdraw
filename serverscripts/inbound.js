@@ -1,5 +1,4 @@
-var net = require('net'),
-	utilities = require('./utilities');
+var net = require('net');	
 
 //the socket
 var socket;
