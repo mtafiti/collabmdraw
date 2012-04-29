@@ -1,0 +1,54 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+	<title>Login to fdraw</title>
+	<link rel="stylesheet" type="text/css" href="styles/fdraw.css"  />
+	<script src="scripts/test/flogin.js"></script>
+</head>
+<body onload="">
+	
+	<!-- the canvas -->
+	
+	<div style="width: 732px; height: 615px; left: 212.5px; top: 35px; opacity: 1; display: block;" class="gui" id="canvas">
+	 <div class="TL"></div>
+	 <div ondblclick="win_size.tog(vars.winMax?'min':'max')" class="TM" style="width: 700px;">
+	  <div class="center">
+	   <span id="cTitle">kDraw Login</span>
+	  </div>
+	  <div id="cZoom" class="east"></div>
+	 </div>
+	 <div class="TR"></div><br>
+	 <div class="ML" style="height: 575px;"></div>
+	 <div class="MM" style="height: 575px; width: 700px;" id="login">	
+		<form class="fieldset-div" action="sdraw-test.html">
+		<fieldset>
+			<legend>Test the application</legend>
+			<div class="form-row">
+				<label for="nick">Name: </label>
+				<input type="text" name="nick" id="nick" value="TestGuy" />
+			</div>
+			<div class="form-row">
+				<label for="room">Room: </label>
+				<select name="room" id="room" onchange="selectRoom(this.value)" >
+					<option value="new">New room</option>
+				</select>
+			</div>
+			<div class="form-row" id="roomname-div">
+				<label for="rname">Room name: </label>
+				<input type="text" name="rname" id="rname" value="testroom" />
+			</div>
+			<div class="form-row">
+				<label for="submit">&nbsp; </label>
+				<input id="sumbit" type="submit" value="Ok" />
+			</div>
+			
+		</fieldset>
+		</form>
+	 </div>
+	 <div class="MR" style="height: 575px;"></div><br>
+	 <div class="BL"></div>
+	 <div class="BM" style="width: 700px;"></div>
+	 <div class="BR"></div>
+	</div>
+	
+</html>

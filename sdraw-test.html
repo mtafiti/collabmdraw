@@ -1,0 +1,201 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+	<title>My Drawing App</title>
+	<link rel="stylesheet" type="text/css" href="styles/fdraw.css"  />
+	<script src="scripts/test/fdraw.js"></script>
+	<script src="scripts/test/utils.js"></script>
+	<script src="scripts/test/gfproxy.js"></script>
+	
+	<script src="http://192.168.1.6:8000/socket.io/socket.io.js"></script>
+	
+	<script type="text/javascript" language="javascript">
+		var HOST = '192.168.1.6:8000';	// 169.254.142.69 change also the socketio ip
+		/*var io_config = {
+			transports: [ 'websocket']
+			,reconnect: false
+		};*/
+		var roomsocket = io.connect('http://'+HOST+'/rooms'),
+			leadersocket = io.connect('http://'+HOST+'/leader');
+
+		var rname = getQueryString('rname');
+		var nickname = getQueryString('nick');
+		setNames(rname,nickname);		
+		
+		roomsocket.on('device connected', function (reply) {
+			console.info(reply.msg);
+		});
+		roomsocket.on('joined', function (reply) {	
+			console.info(reply.msg);
+		});
+		roomsocket.on('msg', function (msg) {	
+			console.info(msg);
+		});
+		//join the room
+		roomsocket.emit('join room', {'rname':rname});
+		//message from device in room received
+		roomsocket.on('message', function(data) {						
+			// handle data. contains shape: rect and mouseevt: evt		
+			//ignore my updates - can also do this in server as faye extension			
+			//if (data.drawid === client.getClientId())
+			//	return;								
+			processDistData(data);
+		});
+		
+		//load the session, if any
+		loadSession();
+		
+		function publishChange(data){
+			//may need to detect if the data is from current client
+			//thus, add id
+			//data.drawid = client.getClientId();
+		
+			data.rname = rname;
+			roomsocket.emit('room_send',data);
+		}
+		
+		function publishGesture(msg){
+			//leadersocket.emit('event raised',msg);
+		}
+	</script>
+</head>
+<body onload="init2()">
+
+	<div id="top">
+	 <div class="center">
+	  <div style="font-variant: small-caps" class="west">
+	   <div class="cur" id="username1" style="left: 12px; top: 10px">User: </div>
+	  <!--  <div id="light" onmousedown="canvas.mode_sw('light');" style="left: 24px; top: 10px">light</div> -->
+	  </div>
+	  <div class="east">
+	   <div style="background: none; border-left: none; border-right:1px solid #161616; height: 22px; padding: 0; cursor: default"></div>
+		<div onmousedown="saveSession();" id="isolid" class="">Save</div>
+	   <div  onmousedown="location.href ='index.html';" id="igradient" class="">Home</div>
+	   <!-- <div onmousedown="win.tab(this,'pattern','pattern'); if(this.className != 'cur') gui_swatch.toType('PT');" id="ipattern" class="cur">pattern</div>
+	   <div onmousedown="win.tab(this,'swatch',vars[vars.id])" id="iswatch" class="cur">swatch</div>
+	   <div onmousedown="win.tab(this,'history',vars[vars.id])" id="ihistory" class="cur">history</div> -->
+	   <div  id="ioptions" class="">
+			<span >&nbsp;</span>
+		</div>
+	  <!--  <div style="display:none" class="cur open" onmousedown="canvas.open();"><span></span></div>
+	   <a target="_blank" onclick="window.saveDrawing(); return false;" href="#">
+		<div class="save"><span></span></div>
+	   </a> -->
+	   <div style="background: none; border-left: none; border: none; border-left:1px solid #3e3e3e; height: 22px; padding: 0; cursor: default"></div>
+	  </div>
+	 </div>
+	</div>
+
+	<!-- div for tools -->
+	<div class="gui" id="tools" style="left: 119.5px; top: 35px; opacity: 1; display: block;">
+	 <div class="bounds">
+	  <div class="TL"></div>
+	  <div class="TM"><div class="TMM">tools</div></div>
+	  <div class="TR"></div><br>
+	  <div class="ML"></div>
+	  <div class="MM">
+	   <div class="z">
+		<div class="tools">
+		 	 <div id="selectallshapes" onclick="selectAllBoxes()"  title="Select all">
+				<img alt="selall" class="Stamp" src="images/selectall.png" />
+			</div>
+		 <div onclick="setCurrentDraw('')" title="Select shapes">
+			<img alt="select" class="Eraser" src="images/select.png" />
+		 </div>
+		<br />
+		 <div class="hr"></div>
+		  <div onclick="setCurrentDraw('line')" title="Draw lines">
+			<img alt="line" class="Marquee_polygon" src="images/Pencil.png" />
+		 </div>
+		 <div onclick="setCurrentDraw('rect')" title="Rect">
+			<img alt="Rect" class="Text" src="images/Shape_rect_3.png" />
+		 </div>
+		 <div onclick="setCurrentDraw('ellipse')" title="Ellipse">		
+			<img alt="ellipse" class="Shape_polygon" src="images/Shape_ellipses.png" />
+		</div>
+		 <div id="drawcrects" onclick="setCurrentDraw('crect')" title="Draw rounded rect" >
+			<img alt="crect" class="Shape_polygon" src="images/Shape_crect.png" />
+		 </div>
+		 <div class="hr"></div>
+		 <div onclick="deleteAllShapes()" title="Delete all">
+			<img alt="delete all shapes" class="Eraser" src="images/deleteall.png" />
+		 </div>
+		 <div onclick="deleteShapes()" title="Delete selected shapes">
+			<img alt="delete" class="Shape_polygon" src="images/eraser.png" />
+		 </div>
+
+		 <div onclick="setCurrentDraw('')" title="Fill">
+			<img alt="Fill" class="Fill" src="images/fill.png" />
+		 </div>
+	 
+		 <div onclick="setCurrentDraw('')" title="Picker">
+			<img alt="Picker" class="Picker" src="images/Shape_rect_3.png" />
+		 </div>
+		  <br>
+		
+		</div>	
+		 <div class="hr"></div>
+		<div class="ss2">
+			Fill color
+			<select id="fillcolor" onchange="changeFill(this.value)">
+			  <option value="#0C69A4" selected="selected">blue</option>
+			  <option value="#7B0909">red</option>			  
+			  <option value="#0C4C11">green</option>
+			  <option value="">none</option>
+			</select> 
+			Border color
+			<select id="bordercolor"  onchange="changeBorderColor(this.value)">
+			  <option value="#0A0A0A">black</option>			  
+			  <option value="blue">blue</option>
+			  <option value="red">red</option>			 
+			  <option value="green">green</option>
+			</select> 
+			Border width
+			<select id="borderwidth"  onchange="changeBorderWidth(this.value)">
+			  <option value="thin">thin</option>
+			  <option value="medium">medium</option>
+			  <option value="thick">thick</option>
+			</select>
+			
+		</div>
+		 <div class="hr"></div>
+		<div class="ss">
+		 <div id="swap">F</div>
+		 <div class="fill" style="z-index: 2; cursor: default;">
+		  <canvas title="Fill" id="fill" onmousedown="gui_palette.click('fill')" width="34" height="23" style="cursor: default;"></canvas>
+		 </div>
+		 <div class="stroke" style="z-index: 1; cursor: pointer;">
+		  <canvas title="Stroke" id="stroke" onmousedown="gui_palette.click('stroke')" width="34" height="23" style="cursor: pointer;"></canvas>
+		  <div onmousedown="gui_palette.click('stroke')"><div></div></div>
+		  <img alt="Switch Stroke with Fill" onmousedown="gui_palette.current(); return false" style="display: block" src="images/sw_switch.png">
+		 </div>
+		</div>
+	   </div>
+	  </div>
+	  <div class="MR"></div><br>
+	  <div class="BL"></div>
+	  <div class="BM"></div>
+	  <div class="BR"></div>
+	 </div>
+	</div>
+	<!-- the canvas -->
+	
+	<div style="width: 732px; height: 615px; left: 212.5px; top: 35px; opacity: 1; display: block;" class="gui" id="canvas">
+	 <div class="TL"></div>
+	 <div ondblclick="win_size.tog(vars.winMax?'min':'max')" class="TM" style="width: 700px;">
+	  <div class="center">
+	   <span id="cTitle">Collab Drawing Session</span>
+	  </div>
+	  <div id="cZoom" class="east"></div>
+	 </div>
+	 <div class="TR"></div><br>
+	 <div class="ML" style="height: 575px;"></div>
+	 <div class="MM" style="height: 575px; width: 700px;">	
+		<canvas id="canv1" width="700px" height="575px">No html5 support for your browser. Sorry.</canvas>
+	 </div>
+	 <div class="MR" style="height: 575px;"></div><br>
+	 <div class="BL"></div>
+	 <div class="BM" style="width: 700px;"></div>
+	 <div class="BR"></div>
+	</div>
+</html>
