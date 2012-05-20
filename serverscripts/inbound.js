@@ -4,7 +4,7 @@ var net = require('net');
 var socket;
 //midas host
 var midasHost = "127.0.0.1", midasPort = 4337, inboundName = '', 
-	file='G:/Masters/Second Year/Thesis/Work/Project/draw/serverscripts/jsrules.clp';
+	file='G:/Masters/Second Year/Thesis/Work/Project/draw/serverscripts/templates.clp';
 
 function connect(host, port, name, callback){
 

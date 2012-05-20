@@ -1,7 +1,7 @@
 
 /** 
-*	kDraw - collaborative drawing application
-*/
+ *	kDraw - collaborative drawing application
+ */
 
 (function (window) {
 	//2 hash tables: for localrefs and for remoterefs
@@ -14,7 +14,7 @@
 	var rname = '';
 	
 	// holds all our boxes
-	var allshapes = [];
+	var allshapes = [], allgroups = [];
 
 	// New, holds the 8 tiny boxes that will be our selection handles
 	// the selection handles will be in this order:
@@ -119,6 +119,9 @@
 			var rect = new SelHandle();
 			this.selectionhandles.push(rect);
 		}
+		
+		//register proxy on this object
+		gfproxy.register(this);
 	}
 
 	// Shapes 'class'
@@ -195,56 +198,64 @@
 				  }
 				}
 		  }, // end draw	  
-		  resize: function(handle){
+		  resize: function(handle, mousex, mousey){
 			var oldx = this.x;
 			var oldy = this.y;
-			var newx = oldx - mx;	//TODO: global
-			var newy = oldy - my;	//TODO: global
-		  
+			var newx = oldx - mousex;	//TODO: global
+			var newy = oldy - mousey;	//TODO: global
+			//keep track of old values
+			var oldvals = {x:this.x, y:this.y, w:this.w, h:this.h};
+			
 			switch (handle) {			
-					  case 0:
-						this.x = mx;
-						this.y = my;
-						this.w += newx;
-						this.h += newy;
-						break;
-					  case 1:
-						this.y = my;
-						this.h += newy;
-						break;
-					  case 2:
-						this.y = my;
-						this.w = mx - oldx;
-						this.h += oldy - my;
-						break;
-					  case 3:
-						this.x = mx;
-						this.w += oldx - mx;
-						break;
-					  case 4:
-						this.w = mx - oldx;
-						break;
-					  case 5:
-						this.x = mx;
-						this.w += oldx - mx;
-						this.h = my - oldy;
-						break;
-					  case 6:
-						this.h = my - oldy;
-						break;
-					  case 7:
-						this.w = mx - oldx;
-						this.h = my - oldy;
-						break;
-					}
-					 //if any value of width or height is -ve 
-					 //set minimum width, height
-					 if(this.w < 5){
-						 this.w = 10;          
-					}
-					 if(this.h < 5){                
-						 this.h = 10;
-					}				               
+				case 0:
+					this.x = mousex;
+					this.y = mousey;
+					this.w += newx;
+					this.h += newy;
+				break;
+				case 1:
+					this.y = mousey;
+					this.h += newy;
+					break;
+				case 2:
+					this.y = mousey;
+					this.w = mousex - oldx;
+					this.h += oldy - mousey;
+					break;
+				case 3:
+					this.x = mousex;
+					this.w += oldx - mousex;
+					break;
+				case 4:
+					this.w = mousex - oldx;
+				break;
+				case 5:
+					this.x = mousex;
+					this.w += oldx - mousex;
+					this.h = mousey - oldy;
+				break;
+				case 6:
+					this.h = mousey - oldy;
+				break;
+				case 7:
+					this.w = mousex - oldx;
+					this.h = mousey - oldy;
+				break;
+			}
+			//if any value of width or height is -ve 
+			//set minimum width, height
+			if(this.w < 5){
+				this.w = 10;          
+			}
+			if(this.h < 5){                
+				this.h = 10;
+			}
+
+			//return the changed ranges
+			return {x: this.x - oldvals.x,
+					y: this.y - oldvals.y,
+					w: this.w - oldvals.w,
+					h: this.h - oldvals.h};
 		  },
 		//get the index of the selected handle of this shape, or -1 if none
 		getSelectedHandle: function(mx,my){
@@ -289,17 +300,40 @@
 		},
 		isSelected: function(){
 			return this.selected;
+		},
+		move: function(x,y){			
+			this.x = this.x + x;
+			this.y = this.y + y;
+			//invalidate the canvas
+			invalidate();
+		},
+		//mouse events
+		mouseDown: function(e){
+			this.select();
+		},
+		mouseMove: function(x,y,e){
+			if (isDrag){
+				this.move(x,y);	
+				publishDistData('editshape',e,this);						
+			} else if (isResizeDrag) {
+				this.resize(e, x, y);
+				publishDistData('editshape',arguments[3],this);
+			}	
+			invalidate();
+		},
+		mouseUp: function(x,y,e){
+			this.selected= false;			
 		}
 	};
 
-	/*
-	*	Now the definition of the shapes
-	*/
+/*
+ *	Now the definition of the shapes
+ */
 	
 	//An ellipse
 	function Ellipse(x,y,w,h){
 		
-	  var ellipse = new ShapeObj(x,y,w,h);
+	  var ellipse = Object.create(new ShapeObj(x,y,w,h));
 	  ellipse.type = 'ellipse';
 	  // draw ellipse function. from: 
 	  // http://stackoverflow.com/questions/2172798/how-to-draw-an-oval-in-html5-canvas
@@ -392,58 +426,7 @@
 				context.fillRect(cur.x, cur.y, mySelBoxSize, mySelBoxSize);
 			  }
 			}
-	  }; // end draw	  
-	  ellipse.resize =function(handle){
-		var oldx = ellipse.x;
-		var oldy = ellipse.y;
-		var newx = oldx - mx;	//TODO: global
-		var newy = oldy - my;	//TODO: global
-	  
-		switch (handle) {
-				  case 0:
-					ellipse.x = mx;
-					ellipse.y = my;
-					ellipse.w += newx;
-					ellipse.h += newy;
-					break;
-				  case 1:
-					ellipse.y = my;
-					ellipse.h += newy;
-					break;
-				  case 2:
-					ellipse.y = my;
-					ellipse.w = mx - oldx;
-					ellipse.h += oldy - my;
-					break;
-				  case 3:
-					ellipse.x = mx;
-					ellipse.w += oldx - mx;
-					break;
-				  case 4:
-					ellipse.w = mx - oldx;
-					break;
-				  case 5:
-					ellipse.x = mx;
-					ellipse.w += oldx - mx;
-					ellipse.h = my - oldy;
-					break;
-				  case 6:
-					ellipse.h = my - oldy;
-					break;
-				  case 7:
-					ellipse.w = mx - oldx;
-					ellipse.h = my - oldy;
-					break;
-				}
-                 //if any value of width or height is -ve 
-				 //set minimum width, height
-                 if(ellipse.w < 5){
-                     ellipse.w = 10;          
-				}
-                 if(ellipse.h < 5){                
-                     ellipse.h = 10;
-				}				               
-	  };
+	  }; // end draw	  	
 		//get the index of the selected handle of ellipse shape, or -1 if none
 		ellipse.getSelectedHandle = function(mx,my){
 
@@ -464,10 +447,10 @@
 	  return ellipse;
 	}
 	
-	//An crect
+	//A crect
 	function CRectangle(x,y,w,h){
 		
-	  var crect = new ShapeObj(x,y,w,h);
+	  var crect = Object.create(new ShapeObj(x,y,w,h));
 	  crect.type = 'crect';
 	  // draw rect function. from: 
 	  // http://stackoverflow.com/questions/2172798/how-to-draw-an-oval-in-html5-canvas
@@ -629,12 +612,10 @@
 	  
 	  return crect;
 	}
-	
-	
-	//for a line, a bit different
-	// shape object to hold data
+		
+	//A line, a bit different
 	function Line(x,y,w,h) {
-		var line = new ShapeObj(x,y,w,h);
+		var line = Object.create(new ShapeObj(x,y,w,h));
 		line.type = 'line';
 		
 		//specialized draw function
@@ -739,7 +720,7 @@
 	  
 	  return line; //return line
 	}
-	
+
 //used to easiy initialize a new shape, 
 //add it, and invalidate the canvas
 function addShape(x, y, w, h, fill, sel, rectid, type, strokecol, strokew) {
@@ -779,71 +760,79 @@ function addShape(x, y, w, h, fill, sel, rectid, type, strokecol, strokew) {
   return rect;
 }
 
-// initialize our canvas, add a ghost canvas, set draw loop
+function createOn(){
+	//this refers to the shape obj
+	return 	function(str, fn){		
+				if (!this[str]){
+					console.log("draw - property not found: "+str);
+					return;
+				}				
+				if (this[str]["rulefn"])
+					return;
+								
+				this[str]["rulefn"] = fn;
+				debugger;
+				gfproxy.registerWhenever(this[str]);				
+			};
+}
+// initialize our canvas, set draw loop
 // then add everything we want to intially exist on the canvas
-function init2() {
-  canvas = document.getElementById('canv1');
-  HEIGHT = canvas.height;
-  WIDTH = canvas.width;
-  ctx = canvas.getContext('2d');
- 
+function init() {
+	canvas = document.getElementById('canv1');
+	HEIGHT = canvas.height;
+	WIDTH = canvas.width;
+	ctx = canvas.getContext('2d');
 
-  //fixes a problem where double clicking causes text to get selected on the canvas
-  canvas.onselectstart = function () { return false; }
 
-  // fixes mouse co-ordinate problems when there's a border or padding
-  // see getMouse for more detail
-  if (document.defaultView && document.defaultView.getComputedStyle) {
-    stylePaddingLeft = parseInt(document.defaultView.getComputedStyle(canvas, null)['paddingLeft'], 10)     || 0;
-    stylePaddingTop  = parseInt(document.defaultView.getComputedStyle(canvas, null)['paddingTop'], 10)      || 0;
-    styleBorderLeft  = parseInt(document.defaultView.getComputedStyle(canvas, null)['borderLeftWidth'], 10) || 0;
-    styleBorderTop   = parseInt(document.defaultView.getComputedStyle(canvas, null)['borderTopWidth'], 10)  || 0;
-  }
+	//fixes a problem where double clicking causes text to get selected on the canvas
+	canvas.onselectstart = function () { return false; }
 
-  // make mainDraw() fire every INTERVAL milliseconds
-  setInterval(mainDraw, INTERVAL);
+	// fixes mouse co-ordinate problems when there's a border or padding
+	// see getMouse for more detail
+	if (document.defaultView && document.defaultView.getComputedStyle) {
+		stylePaddingLeft = parseInt(document.defaultView.getComputedStyle(canvas, null)['paddingLeft'], 10)     || 0;
+		stylePaddingTop  = parseInt(document.defaultView.getComputedStyle(canvas, null)['paddingTop'], 10)      || 0;
+		styleBorderLeft  = parseInt(document.defaultView.getComputedStyle(canvas, null)['borderLeftWidth'], 10) || 0;
+		styleBorderTop   = parseInt(document.defaultView.getComputedStyle(canvas, null)['borderTopWidth'], 10)  || 0;
+	}
 
-  //the events
-  var o = {
-		md: myDown,
-		mu: myUp,
-		mm: myMove,
-		seq:{
-			invoked: [{			
-					fn: "md",
-					args: [],
-					receiver: ''
-				},
-				{			
-					fn: "mu",
-					args: [],
-					receiver: ''
-				}
-			],
-			callback: {
-				name: "mdmu",
-				fn: function(args) {
-					//dosthng
-					console.log("Sequence callback called.");
-					console.dir(args);									
-				}
-			}
-		}
-  };
-	//make it a group object
-	groupObject(o);
-  
-  canvas.onmousedown = o.md;
-  canvas.onmouseup = o.mu;
-  //canvas.ondblclick = myDblClick;
-  canvas.onmousemove = o.mm;
-  
-  //enter name
-  var txt = document.createTextNode(nick|| 'Anon');
-	document.getElementById('username1').appendChild(txt);
+	// make mainDraw() fire every INTERVAL milliseconds
+	setInterval(mainDraw, INTERVAL);
 	
+	//init the proxy
+	gfproxy = gfProxyInit(leadersocket);
+	
+	//register
+	var grpobj = new groupObject({
+		//the rule to assert to midas for this grp. note: \ is string newline in js
+		bodyRule: rule("bodyRule",
+						"(startDM (dev1 ?d1) (dev2 ?d2)) \
+						 (not (or (endDM (dev1 ?d1) (dev2 ?d2)) \
+							  (endDM (dev1 ?d2) (dev2 ?d1)))) \
+						 (Invoked (function touchMove) (args ?x ?y ?on) (dev ?dm)) \
+						 (test (or (= ?dm ?d1) (= ?dm ?d2)))\
+						 => \
+						 (assert (bodyDM (dev1 ?d1) (dev2 ?d2))) \
+						 (call (args ?x ?y))))")
+	});
+	grpobj.on("bodyRule", function(data){
+		console.log("Collab function called. data: "+data);
+		debugger;
+	});
+	
+	canvas.onmousedown = myDown;
+	canvas.onmouseup = myUp;
+	//canvas.ondblclick = myDblClick;
+	canvas.onmousemove = myMove;
+
+	//show name
+	var txt = document.createTextNode(nick|| 'Anon');
+	document.getElementById('username1').appendChild(txt);
+
 	//default status - selecting mode
 	setCurrentDraw('');
+	
+
 }
 
 
@@ -900,49 +889,24 @@ function setCurrentDraw(draw){
 function myMove(e){
 	//report to midas
 	publishMouseEvent(e,MOVE);
-	
-  if (isDrag) {
-	
 	//store some global vars
     getMouse(e);
-	
+ 
 	//move means we are updating sthng that is selected,
 	//so report this to others, in case they are doing same thing to a shape
 	for (var i=0; i<allshapes.length; i++){
 		var _shape = allshapes[i];
-		if (_shape.selected){
-			_shape.x = _shape.x + changeInX;
-			_shape.y = _shape.y + changeInY;
-			publishDistData('editshape',e,_shape);
-		}
-	}
-    // something is changing position so invalidate the canvas
-    invalidate();
-
-  } else if (isResizeDrag) {
-    // time to resize
-	 for (var i=0; i<allshapes.length; i++){
-			var _shape = allshapes[i];
-			 if (_shape.isSelected()){
-				var oldx = _shape.x;
-				var oldy = _shape.y;
-                var newx = oldx - mx;
-                var newy = oldy - my;
-				// 0  1  2
-				// 3     4
-				// 5  6  7
-				_shape.resize(expectResize);				
-                publishDistData('editshape',e,_shape);  //can create a new state for resize..                                                       
-				//for now use editshape
-				invalidate();
-			
-				break;	//only resize one - to change this later to allow for multi-resize
+		if (_shape.isSelected()){			
+			if (isDrag) {
+				_shape.mouseMove(changeInX,changeInY,e);
+			} else if (isResizeDrag) {
+				_shape.mouseMove(mx,my, expectResize,e);
+				break;
 			}
-		}
-	}
+		}	
+	} 
 
-  getMouse(e);
-  // if there's a selection see if we grabbed one of the selection handles
+	// if there's a selection see if we grabbed one of the selection handles
 	if (isAnyBoxSelected() && !isResizeDrag) {
 
 	var selBoxes = getSelectedBoxes();
@@ -954,7 +918,7 @@ function myMove(e){
 		// 0  1  2
 		// 3     4
 		// 5  6  7
-		if ( curhandle !== -1){		
+		if ( curhandle !== -1){	
 			// we found one!
 			expectResize = curhandle;
 			invalidate();
@@ -987,7 +951,7 @@ function myMove(e){
 					break;
 			}
 			return;
-		}			
+		}
 	}
     // not over a selection shape, return to normal
     isResizeDrag = false;
@@ -998,8 +962,6 @@ function myMove(e){
 
   } else if (isMultiSelecting){
 	// Update the end coordinates of the selection rectangle
-		getMouse(e);
-
 		selectionEndX = mx;
 		selectionEndY = my;
 
@@ -1026,10 +988,7 @@ function myDown(e){
 	for (var i = l-1; i >= 0; i--) {
 		var _shape = allshapes[i];
 		
-		/*
-		 // Determine if the _shape was clicked
-		 // to draw over a shape: (_shape.isHit(mx,my) && !isDrawing)
-		*/
+		// Determine if the _shape was clicked		
 		if (_shape.isHit(mx,my)&& !isDrawing){
 			// we hit a shape!
 			// if this shape is not selected then select it only
@@ -1038,7 +997,7 @@ function myDown(e){
 			if (!_shape.isSelected()) {
 				clearSelectedBoxes();
 			}
-			_shape.select();
+			_shape.mouseDown(e);
 			isDrag= true;
 			invalidate();			
 			return;
@@ -1046,7 +1005,6 @@ function myDown(e){
 	}
 	
 	//we may be drawing a shape now
-	//TODO: SET THE ISDRAWING TO TRUE IN THE TOOLBAR CLICK
 	if (isDrawing){
 		// for this method width and height determine the starting X and Y, too.
 		// are vars in case we wanted to make them args/global for varying sizes
@@ -1086,9 +1044,13 @@ function myDown(e){
 }
 
 function myUp(e){
-
+	var i, l;
+	
 	//report to midas
 	publishMouseEvent(e,DEATH);
+	
+	//normalize coordinates relative to canvas
+	getMouse(e);
 	
 	isDrag = false;
 	isResizeDrag = false;
@@ -1109,13 +1071,23 @@ function myUp(e){
 	if (currDrawType !== ''){
 		clearSelectedBoxes();
 	}
+	
+	//mouse up on which shape?
+	for (i = 0, l = allshapes.length; i < l; i++){
+		var _shape = allshapes[i];
+		if (_shape.isHit(mx,my)){
+			_shape.mouseUp();
+			break;
+		}
+	}
+	
 	//end multi select part
 	invalidate();
 }
 
 // adds a new node
 function myDblClick(e) {
-	debugger;
+	
 	getMouse(e);
 	// for this method width and height determine the starting X and Y, too.
 	// are vars in case we wanted to make them args/global for varying sizes
@@ -1134,8 +1106,7 @@ function invalidate() {
 //checks if any _shape is selected
 function isAnyBoxSelected()
 {
-	for (var i=0; i<allshapes.length; i++)
-	{
+	for (var i=0; i<allshapes.length; i++){
 		if (allshapes[i].isSelected())
 			return true;
 	}
@@ -1145,26 +1116,19 @@ function isAnyBoxSelected()
  * function clearSelectedBoxes: Clear all selected boxes
  *
 **/
-function clearSelectedBoxes()
-{
-	//store the 
-	var shpids = [];
+function clearSelectedBoxes(){
 	
-	for (var i=0; i<allshapes.length; i++)
-	{
+	for (var i=0; i<allshapes.length; i++){
 		if (allshapes[i].isSelected()){
 			allshapes[i].unselect();
-			shpids.push(allshapes[i].shpid);
 		}
-	}
+	}	
 	invalidate();
-	//distribute, only if it was a group selection
-	if (shpids.length > 1){
-		publishChange({eventType: 'ungroupshapes', shapes: shpids});
-	}
 }
 
-//untested function
+/** 
+ * deleteSelectedBoxes: delete the currently-selected boxes
+ */
 function deleteSelectedBoxes(){
 
 	//here we replace selected boxes with nulls - not to mess with indices..	
@@ -1344,8 +1308,8 @@ function selectShapesInRectangle() {
 			selshapes[0].select();
 		break;
 		
-		default:	//put all in one group
-			groupShapes(selshapes);
+		default:	
+			selshapes[0].select();
 		break;		
 	}	
 }
@@ -1446,24 +1410,6 @@ function processDistData(data)
 					thebox.strokewidth  = data.shape.strokewidth;
 					invalidate();
 				}
-			}
-		break;
-		case 'groupshapes':{			
-				data.shapes.forEach(function (shapeid){
-					var shape = getBox(shapeid);
-					if (!shape)
-						return;
-					shape.group = data.group;
-				});
-			}
-		break;
-		case 'ungroupshapes':{
-				data.shapes.forEach(function (shapeid){
-					var shape = getBox(shapeid);
-					if (!shape)
-						return;
-					shape.group = "";
-				});
 			}
 		break;
 	}
@@ -1582,50 +1528,18 @@ function setNames(roomname,nickname){
 	function groupObject: constructor function
 	@param config: the object describing the config for the group object
 */
-function groupObject(obj){
-	var properties, propertiesStr, invokeArr, preds, i, l, inv, pred, seq;
+function groupObject(seq){
+	var properties;
 	
-	if ( !obj.seq || !obj.seq.invoked )
-		return obj;
-		
 	//get propertynames as an array
-	//properties = Object.getOwnPropertyNames(o);			
+	//properties = Object.getOwnPropertyNames(obj);
 	//filter fns only - filter has to exist
-	//properties = properties.filter(function(prop){ return typeof prop === "function"; });
-	
-	//see if only one predicate is defined
-	invokeArr = (obj.seq.invoked instanceof Array) === true ? obj.seq.invoked : [obj.seq.invoked];
-	
-	gfproxy = gfProxyInit(leadersocket, localRefsTable, farRefsTable);
-	
-	//TODO: where...?
-	gfproxy.sendConfigToServer(invokeArr, obj.seq.callback);
-	
-	//now add the actual proxy
-	gfproxy.intercept(obj);
+	//properties = properties.filter(function(prop){ return typeof prop === "function"; });		
+	Object.extend(this, seq);
+	this.on = createOn();
 }
-/**
- * function groupShapes - add shapes to group, publishes the action
- *	@param shapes - the shapes to add to a new group
- *  @returns the new group id
- */
- function groupShapes(shapes){
-	//new group id
-	var grpid = generateRandomID("GRP-");
-	var shpids = [];
-	shapes.forEach(function (shape){
-		//select only if it has no group id 
-		if (shape.group === ""){
-			shape.select();
-			shape.group = grpid;
-			//add to array to publish later
-			shpids.push(shape.shpid);
-		}
-	});
-	//publish this directly using publish change
-	publishChange({eventType: 'groupshapes', group: grpid, shapes: shpids});
- }
-// ----------------------
+
+// ------------------ Utility functions -------------------
 /** 
 	generateRandomID: Utility function to generate random IDs
 	@param: start - an optional starting string for the id
@@ -1653,8 +1567,19 @@ function groupObject(obj){
 	
 	return start+uuid.join('');	
 }
-//  generate random color
-//  returns a hex string for color
+
+/**
+ * function rule: 
+ * @param rulestr - 
+ */
+function rule(name, rulestr){
+	return {'rulename': name, rule: rulestr};
+}
+
+/**
+ *	function getRandomColor - generate random color
+ *	@returns a hex string for color
+ */ 
 function getRandomColor() {
     var letters = '0123456789ABCDEF'.split('');
     var color = '#';
@@ -1662,6 +1587,19 @@ function getRandomColor() {
         color += letters[Math.round(Math.random() * 15)];
     }
     return color;
+}
+
+/** 
+*	Object.create - prototypal inheritance. 
+*	From: http://javascript.crockford.com/prototypal.html
+*	@param o: the object
+*/	
+if (typeof Object.create !== 'function') {
+    Object.create = function (o) {
+        function F() {}
+        F.prototype = o;
+        return new F();
+    };
 }
 	/** 
 	*	ajax remote POST call
@@ -1697,7 +1635,7 @@ function remoteCall(url, args, responseCallback) {
 // If we dont want to use <body onLoad='init()'> on client page
 // we could uncomment this init() reference and place the script reference inside the body tag
 //init();
-window.init2 = init2;
+window.init = init;
 window.processDistData = processDistData;
 window.setCurrentDraw = setCurrentDraw;
 window.changeFill = changeFill;

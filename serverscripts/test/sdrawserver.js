@@ -98,7 +98,7 @@ function start(route, handle){
 			msg: 'Device connected to leader'
 		});
 		*/
-		socket.on('register_sequence', function (data, seqname, returnfn) {	  
+		socket.on('register_sequence', function (data, seqname, returnfn) {
 				
 			test_midas.publishSequenceConfig(data, seqname, function(invokes, eventType){
 				//at this point midas has identified a cb sequence				

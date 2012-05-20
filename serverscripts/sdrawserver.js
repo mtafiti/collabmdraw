@@ -93,17 +93,17 @@ function start(route, handle){
 			msg: 'Device connected to leader'
 		});
 		*/
-		socket.on('register_sequence', function (data, seqname, returnfn) {	  
-				
-			midas.publishSequenceConfig(data, seqname, function(invokes){
+		socket.on('register_sequence', function (seqname, rule, returnfn) {			
+			
+			midas.publishSequenceConfig(seqname, rule, function(invokes){
 				//at this point midas has identified a cb sequence				
 				//get room name, then send to ppl in room
-				socket.get('roomname', function (err, name) {					
-					//now send to devices in room					
+				socket.get('roomname', function (err, name) {
+					//now send to devices in room
 					socket.broadcast.json.to(name).emit('sequence_callback',invokes);
 					//console.log("Sequence callback called. data: ");
-					//console.dir(invokes);					
-				});	
+					//console.dir(invokes);				
+				});
 				
 			});
 			//finished registering sequence
@@ -114,10 +114,10 @@ function start(route, handle){
 				midas.publishInvoke(data,socket.id, function(data){
 							//return the result to client
 							returnfn(data);
-						});			
+				});			
 		  });
 	  });
-	  
+	
 	//start socket connection to midas
 	midas.start();
 }

@@ -21,14 +21,13 @@ var gfProxyInit = (function(leadersocket) {
 		@param allArgs - the 'arguments' array of the invoked function
 	*/
 	function proxyFunction(fn, invoked, allArgs){	
-		
 		var interception = {
 			'fn': invoked.fn,
 			args: invoked.args,
 			argmap: '',//allArgs,
 			rec: invoked.receiver || 'none'
 		};
-		
+		debugger;
 		fn();
 		/*leadersocket.emit('fn_invoked', interception, function (data) {			
 			
@@ -40,45 +39,59 @@ var gfProxyInit = (function(leadersocket) {
 		*/
 	}
 	/**
-		send the seq config to server to create necessary templates/rule(s)
-		@param invokeArr: the array of sequence invoke configs
-		@param seqcb: the the sequence callback object
+		send the rule to server to create necessary templates/rule(s)
+		@param name: the name of the rule
+		@param rule: the rule string
 	*/
-	function sendConfigToServer(invokes, seqcb){
+	function sendRuleToServer(rule){
 		
 		//send event to leader/server. can add client id here
-		leadersocket.emit('register_sequence', invokes, seqcb.name, function (msg) {		
-			//output the results
+		leadersocket.emit('register_sequence', rule.rulename, rule.rule, function (msg) {		
+			//output the results of the registration
+			//note this is not the sequence callback
 			console.log(msg); 
 		});
 		
+		var seqcb = rule.rulefn;
 		//when a sequence has been detected...
 		leadersocket.on('sequence_callback',function(data){			
-			seqcb.fn.call(null, data);
+			//todo: context
+			seqcb.call(null, data);
 		});
 	}
 	
 	/**
 		apply the interceptions
-		@param o: the object
+		@param o: the shape object
 		@param invokeArr: the array of invoke json objects
 	*/
-	function applyInterceptions(o, invokeArr){		
-		var func, err, i, l, inv, seqcb;		
+	function applyInterceptions(o){		
+		var func, err, i, l, rules = [], seqcb, invokeArr =[];		
 		
-		//the callback for the sequence
-		seqcb = o.seq.callback;
+		var properties = [];
+		if (o) {
+			for (key in o) {
+				properties.push(key);
+			}
+		};			
 		
-		for ( i = 0, l = invokeArr.length; i < l; i++ ){			
+		//filter fns only. note: filter has to exist
+		var fnproperties = properties.filter(function(prop){ 
+			//for this scenario, check if its a function and starts with mouse
+			return typeof o[prop] === "function" && (prop.lastIndexOf("mouse", 0) === 0); 
+		});
+		
+		for ( i = 0, l = fnproperties.length; i < l; i++ ){			
 			
-			inv = invokeArr[i];
-			func = o[inv.fn];
+			inv = fnproperties[i];
+			func = o[inv];
 			
 			//check if it is a function
 			if (typeof func !== "function") continue;
 			//replace fn with proxy fn
+			var params = getFunctionParams(func);
 			
-			o[inv.fn] = ( function (val, fun) {	//enclose in closure
+			o[inv] = ( function (val, fun, theparams) {	//enclose in closure
 				return function() {
 				//receiver is "this" when fn is called. args is in arguments array
 				var self = this, args = Array.prototype.slice.call(arguments);
@@ -88,9 +101,9 @@ var gfProxyInit = (function(leadersocket) {
 					//remember scope could be lost, so use self var as scope
 					//debugger;
 					return fun.apply(self, args);
-					}, val, args);
+					}, val, args, theparams);
 				}
-			})(inv,func);
+			})(inv,func, params);
 		}
 	}
 	
@@ -119,29 +132,28 @@ var gfProxyInit = (function(leadersocket) {
 				return names;
 			};
 		}
+		if (!Object.extend){
+			Object.extend = function(destination, source) {
+				for (var k in source) {
+					if (source.hasOwnProperty(k)) {
+						destination[k] = source[k];
+					}
+				}
+				return destination; 
+			}
+		}
 	})();
 	
 	/** proxy. inspired by Darren Schnare's aopjs, MIT
 		@param obj - object to be proxied
 	*/
 	return {
-		intercept: function (obj){
-			var properties, propertiesStr, invokeArr, i, l;
+		register: function (obj){
+			var properties, fnproperties;
 			
-			if ( !obj.seq || !obj.seq.invoked )
-				return obj;
-				
-			//get propertynames as an array
-			//properties = Object.getOwnPropertyNames(o);			
-			//filter fns only - filter has to exist
-			//properties = properties.filter(function(prop){ return typeof prop === "function"; });
-			
-			//see if only one predicate is defined
-			invokeArr = (obj.seq.invoked instanceof Array) === true ? obj.seq.invoked : [obj.seq.invoked];			
-			applyInterceptions(obj, invokeArr);
-			
+			applyInterceptions(obj);
 		},
-		'sendConfigToServer': sendConfigToServer
+		'registerWhenever': sendRuleToServer
 	};
 	
 });

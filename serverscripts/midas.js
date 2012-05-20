@@ -120,21 +120,16 @@ function publishInvoke(data, clientId, invokecb){
 /** publishSequenceConfig - send sequence initialization to midas
 	@param: obj: 	
 */ 
-function publishSequenceConfig(invokeArr, seqname, seqcb){
+function publishSequenceConfig(seqname, rule, seqcb){
 	//make the predicates first
 	var preds, i, l, inv, pred, seq;	
-	if ( !invokeArr || invokeArr.length === 0 )
-		return;	
+	if ( !seqname || seqname.length === 0 )
+		return;			
 	
-	preds = [];	
+	//format the rule a bit
+	var rulestr = formatRule(seqname, rule);
 	
-	//create config, after making predicates
-	for ( i = 0, l = invokeArr.length; i < l; i++ ){		 
-		inv = invokeArr[i];
-		pred = new predicates.Predicate(inv.name || "Pred"+i, inv.fn, inv.args, inv.receiver);
-		preds.push(pred);
-	}
-	//the callback
+	//TODO: work out the callback
 	var cb = function(data){
 		//remove args from table
 		
@@ -146,31 +141,44 @@ function publishSequenceConfig(invokeArr, seqname, seqcb){
 			//remove client callback
 			var clientcb = fntable.get(argkey);			
 			//call it but dismiss
-			if (typeof clientcb === 'function') 
+			if (typeof clientcb === 'function')
 				clientcb.call(null, {isseqcb: true, msg: 'Function call ignored'});
 		});
-		//now send to node this info, so that it can distribute it					
+		//now send to node this info, so that it can distribute it
 		seqcb.call(null, invokes);
 	};
-	//start by creating a new sequence object	
-	seq = new predicates.Sequence(seqname, preds, cb);
 	
 	//subscribe to this sequence once it is asserted
-	subscribe(seq.name, cb);
-	
-	var seqstr = seq.write();
+	subscribe(seqname, cb);
 
-	console.log("about to register sequence to midas.. \n");	
-	console.log(seqstr.template);
-	console.log(seqstr.rule);
-		/**/
+	console.log("about to register sequence to midas.. \n");
+	console.log(rulestr);
 	
 	//then send string to midas
+	addSExpression(rulestr);
+}
+/** 
+ *	function formatRule: formats the rule from the device 
+ *  @param rule - the rule to format
+ *	@returns the formatted rule
+ */
+function formatRule(seqname, rule){
+	var wholerule = '';
 	
-	addSExpression(seqstr.template);	
-	addSExpression(seqstr.rule);		
-		
-}	
+	var deftemplate = '(deftemplate '+seqname+' (multislot args)) ';
+	var defrule = '(defrule rule-'+seqname+' ';
+	
+	wholerule += deftemplate;
+	wholerule += defrule;
+	
+	rule = rule.replace('(call', '(assert (' + seqname + ' ');
+	rule = rule.replace('function', 'fn');
+	
+	wholerule += rule;
+	// += ' )';
+	
+	return wholerule;
+}
 //exports
 exports.start = start;
 exports.publish = publish;

@@ -860,13 +860,6 @@ function init2() {
 	//default status - selecting mode
 	setCurrentDraw('');
 	
-	//add get and put to the tables
-	tableMixin.call(farRefsTable);
-	tableMixin.call(localRefsTable);
-	//add 'read' in table
-	fTableMixin.call(farRefsTable);
-	//add 'write' in objects
-	lRefsMixin.call(Box2.prototype, localRefsTable, farRefsTable);
 }
 
 
@@ -915,8 +908,7 @@ function setCurrentDraw(draw){
 		
 	}
 	else
-		isDrawing = false;
-		
+		isDrawing = false;	
 }
 
 // Happens when the mouse is moving inside the canvas
@@ -1569,52 +1561,6 @@ function setNames(roomname,nickname){
 	rname = roomname||''; nick = nickname||'';
 }
 
-/**
-	Mixins to add localrefs/farrefs functionality
-*/
-var tableMixin = function(){
-	this.get = function(key){				
-		return this[key];
-	};
-	this.put = function(key,val){
-		this[key] = val;
-	};
-};
-/**
-	Mixin local/far ref semantics to table
-	Presumption: all bjects in system have ids
-	@param lTable: the local objects table
-	@param fTable: the far refs table
-*/
-var lRefsMixin = function(lTable,fTable){	
-	this.write = function(){
-		if (!lTable){
-			return null;
-		}
-		if (!this.farid){
-			this.farid =  generateRandomID('FAR-');
-		}
-		//store in local refs
-		lTable.put(this.shpid,this.farid);
-		//create in far refs
-		fTable.put(this.farid, this.shpid);		
-		//return far ref
-		return this.farid;
-	};
-};
-/**
-	Mixin for far ref table to get local ref id
-*/
-var fTableMixin = function(){	
-	this.read = function(farRefID){		
-		//get the localid of the far ref
-		var lid = this.get(farRefID);
-		if (!lid){
-			return '';
-		}		
-		return lid;		
-	}
-};
 /**
 	function groupObject: constructor function
 	@param config: the object describing the config for the group object
