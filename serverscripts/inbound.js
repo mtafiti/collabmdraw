@@ -1,3 +1,10 @@
+
+/**
+ *	inbound.js - wrapper for the midas inbound socket
+ *	Author: Kennedy Kambona
+ *
+**/
+
 var net = require('net');	
 
 //the socket

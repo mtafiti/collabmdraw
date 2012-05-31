@@ -799,28 +799,7 @@ function init() {
 	// make mainDraw() fire every INTERVAL milliseconds
 	setInterval(mainDraw, INTERVAL);
 	
-	//init the proxy
-	gfproxy = gfProxyInit(leadersocket);
-	
-	//register
-	var grpobj = new groupObject({
-		//the rule to assert to midas for this grp. note: \ is string newline in js
-		bodyRule: rule("bodyRule",
-						"(startDM (dev1 ?d1) (dev2 ?d2)) \
-						 (not (or (endDM (dev1 ?d1) (dev2 ?d2)) \
-							  (endDM (dev1 ?d2) (dev2 ?d1)))) \
-						 (Invoked (function touchMove) (args ?x ?y ?on) (dev ?dm)) \
-						 (test (or (= ?dm ?d1) (= ?dm ?d2)))\
-						 => \
-						 (assert (bodyDM (dev1 ?d1) (dev2 ?d2))) \
-						 (call (args ?x ?y))))")
-	});
-	grpobj.on("bodyRule", function(data){
-		console.log("Collab function called. data: "+data);
-		debugger;
-	});
-	
-	canvas.onmousedown = myDown;
+	canvas.onmousedown = myDown;	
 	canvas.onmouseup = myUp;
 	//canvas.ondblclick = myDblClick;
 	canvas.onmousemove = myMove;
@@ -832,6 +811,31 @@ function init() {
 	//default status - selecting mode
 	setCurrentDraw('');
 	
+	//init the proxy
+	gfproxy = gfProxyInit(leadersocket);
+	
+	//register
+	var grpobj = new groupObject({
+		//the rule to assert to midas for this grp. note: \ is string newline in js
+		startRule: rule("startRule",
+						'(Invoked (function "touchDown") (dev ?d1) (args ?x1 ?y1 ?on1))				(Invoked (function "touchDown") (dev ?d2) (args ?x2 ?y2 ?on2)) (test (neq ?d1 ?d2))						(test (time:within ?on1 ?on2 500))						(not (startDM (dev1 ?d1) (on ?on1)))						(not (and (Invoked (function "touchUp") (dev ?d1) (args ?x3 ?y3 ?on3)) (test (time:before ?on2 ?on3)))) => (printout t "startDM1 asserted" crlf) (assert (startDM (dev1 ?d1) (dev2 ?d2) (on ?on1) (args ?x1 ?y1))) (call (args ?x1 ?y1  ?x2 ?y2))'),
+		bodyRule: rule("bodyRule",
+						'(startDM (dev1 ?d1) (dev2 ?d2)) (not (or (endDM (dev1 ?d1) (dev2 ?d2)) (endDM (dev1 ?d2) (dev2 ?d1)))) (Invoked (function "touchMove") (args ?x ?y ?on) (dev ?dm)) (test (or (= ?dm ?d1) (= ?dm ?d2))) => (assert (bodyDM (dev1 ?d1) (dev2 ?d2) (args ?x ?y))) (call (args ?x ?y))'),
+		endRule: rule("endRule",
+						'(startDM (dev1 ?d1) (dev2 ?d2) (on ?don) ) (Invoked (function "touchMove") (dev ?dx) (args ?x ?y ?on1)) (test (or (eq ?dx ?d1) (eq ?dx ?d2))) (not (endDM (dev1 ?d1) (dev2 ?d2) (on ?don))) => (printout "endDM asserted" crlf) (assert (endDM (dev1 ?d1) (dev2 ?d2) (on ?don) (args ?x ?y))) (call (args ?x ?y))')
+	});
+	grpobj.on("startRule", function(data){
+		console.log("Collab function initiated. data: "+data);
+		debugger;
+	});
+	grpobj.on("bodyRule", function(data){
+		console.log("Collab function called. data: "+data);
+		debugger;
+	});
+	grpobj.on("endRule", function(data){
+		console.log("Collab function ended. data: "+data);
+		debugger;
+	});		
 
 }
 
@@ -1632,8 +1636,6 @@ function remoteCall(url, args, responseCallback) {
 
 // -------------- external functions -------------------------
 
-// If we dont want to use <body onLoad='init()'> on client page
-// we could uncomment this init() reference and place the script reference inside the body tag
 //init();
 window.init = init;
 window.processDistData = processDistData;

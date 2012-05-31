@@ -127,7 +127,7 @@ function publishSequenceConfig(seqname, rule, seqcb){
 		return;			
 	
 	//format the rule a bit
-	var rulestr = formatRule(seqname, rule);
+	var ruleobj = formatRule(seqname, rule);
 	
 	//TODO: work out the callback
 	var cb = function(data){
@@ -151,16 +151,18 @@ function publishSequenceConfig(seqname, rule, seqcb){
 	//subscribe to this sequence once it is asserted
 	subscribe(seqname, cb);
 
-	console.log("about to register sequence to midas.. \n");
-	console.log(rulestr);
+	console.log("about to register template to midas.. \n");
+	console.dir(ruleobj);
 	
-	//then send string to midas
-	addSExpression(rulestr);
+	//first send template
+	addSExpression(ruleobj.template);
+	//then send the rule
+	addSExpression(ruleobj.rule);
 }
 /** 
  *	function formatRule: formats the rule from the device 
  *  @param rule - the rule to format
- *	@returns the formatted rule
+ *	@returns an obj with the template and the rule string
  */
 function formatRule(seqname, rule){
 	var wholerule = '';
@@ -168,16 +170,14 @@ function formatRule(seqname, rule){
 	var deftemplate = '(deftemplate '+seqname+' (multislot args)) ';
 	var defrule = '(defrule rule-'+seqname+' ';
 	
-	wholerule += deftemplate;
 	wholerule += defrule;
 	
-	rule = rule.replace('(call', '(assert (' + seqname + ' ');
-	rule = rule.replace('function', 'fn');
+	rule = rule.replace('(call', '(printout t "'+seqname+'" crlf) (assert (' + seqname + ' ');
+	rule = rule.replace(/function/g, 'fn');
 	
-	wholerule += rule;
-	// += ' )';
+	wholerule += rule += ' ) )';
 	
-	return wholerule;
+	return {template: deftemplate, rule: wholerule};
 }
 //exports
 exports.start = start;
