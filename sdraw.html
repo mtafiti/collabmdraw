@@ -31,20 +31,14 @@
 		roomsocket.emit('join room', {'rname':rname});
 		//message from device in room received
 		roomsocket.on('message', function(data) {						
-			// handle data. contains shape: rect and mouseevt: evt		
-			//ignore my updates - can also do this in server as faye extension			
-			//if (data.drawid === client.getClientId())
-			//	return;								
+			// handle data. contains shape: rect and mouseevt: evt						
 			processDistData(data);
 		});
 		
 		//load the session, if any
 		loadSession();
 		
-		function publishChange(data){
-			//may need to detect if the data is from current client
-			//thus, add id
-			//data.drawid = client.getClientId();		
+		function publishChange(data){	
 			data.rname = rname;
 			roomsocket.emit('room_send',data);
 		}
@@ -123,8 +117,8 @@
 			<img alt="Fill" class="Fill" src="images/fill.png" />
 		 </div>
 	 
-		 <div onclick="groupShapes()" title="Group/Ungroup shapes">
-			<img alt="Group shapes" class="Picker" src="images/group2.png" />
+		 <div onclick="" title="Misc">
+			<img alt="Misc" class="Picker" src="images/group2.png" />
 		 </div>
 		  <br>
 		

@@ -41,9 +41,9 @@ function start(route, handle){
 		var socketRoom = '';			
 		//leader can multicast to everyone who connected
 		rooms.emit('device connected', {
-			msg: 'Device connected to room'
+			msg: 'Device of id:' +socket.id+ 'connected to room'
 		});
-		socket.on('join room',function(msg){
+		socket.on('join_room',function(msg){
 			//device joins room
 			socket.join(msg.rname);
 			socketRoom = msg.rname;
@@ -114,7 +114,7 @@ function start(route, handle){
 				midas.publishInvoke(data,socket.id, function(data){
 							//return the result to client
 							returnfn(data);
-				});			
+				});		
 		  });
 	  });
 	

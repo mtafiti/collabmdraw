@@ -108,9 +108,6 @@
 		
 		//unique id
 		this.shpid = generateRandomID('SHP-');
-		
-		//grp id
-		this.group = -1;
 	  	  
 		//selection handles for each shape
 		this.selectionhandles = new Array();
@@ -290,12 +287,7 @@
 		select: function(){			
 			this.selected = true;
 		},
-		groupSelect: function(grpid){
-			this.group = grpid;
-			this.selected = true;
-		},
 		unselect: function(){
-			this.group = "";
 			this.selected = false;
 		},
 		isSelected: function(){
@@ -316,8 +308,8 @@
 				this.move(x,y);	
 				publishDistData('editshape',e,this);						
 			} else if (isResizeDrag) {
-				this.resize(e, x, y);
-				publishDistData('editshape',arguments[3],this);
+				this.resize(arguments[3], x, y);	//use resize handle as 4th arg
+				publishDistData('editshape',e,this);
 			}	
 			invalidate();
 		},
@@ -766,12 +758,13 @@ function createOn(){
 				if (!this[str]){
 					console.log("draw - property not found: "+str);
 					return;
-				}				
+				}
+				//if already defined, do nothing.
 				if (this[str]["rulefn"])
 					return;
 								
 				this[str]["rulefn"] = fn;
-				debugger;
+				
 				gfproxy.registerWhenever(this[str]);				
 			};
 }
@@ -818,11 +811,11 @@ function init() {
 	var grpobj = new groupObject({
 		//the rule to assert to midas for this grp. note: \ is string newline in js
 		startRule: rule("startRule",
-						'(Invoked (function "touchDown") (dev ?d1) (args ?x1 ?y1 ?on1))				(Invoked (function "touchDown") (dev ?d2) (args ?x2 ?y2 ?on2)) (test (neq ?d1 ?d2))						(test (time:within ?on1 ?on2 500))						(not (startDM (dev1 ?d1) (on ?on1)))						(not (and (Invoked (function "touchUp") (dev ?d1) (args ?x3 ?y3 ?on3)) (test (time:before ?on2 ?on3)))) => (printout t "startDM1 asserted" crlf) (assert (startDM (dev1 ?d1) (dev2 ?d2) (on ?on1) (args ?x1 ?y1))) (call (args ?x1 ?y1  ?x2 ?y2))'),
+						'(Invoked (function "mouseDown") (dev ?d1) (args ?a1) (on ?on1))	(Invoked (function "mouseDown") (dev ?d2) (args ?a2)(on ?on2)) (test (neq ?d1 ?d2))						(test (time:within ?on1 ?on2 500))						(not (startDM (dev1 ?d1) (on ?on1)))						(not (and (Invoked (function "mouseUp") (dev ?d1) (args ?a3) (on ?on3)) (test (time:before ?on2 ?on3)))) => (printout t "startDM1 asserted" crlf) (assert (startDM (dev1 ?d1) (dev2 ?d2) (on ?on1) (args ?a1))) (call (args ?a1  ?a2))'),
 		bodyRule: rule("bodyRule",
-						'(startDM (dev1 ?d1) (dev2 ?d2)) (not (or (endDM (dev1 ?d1) (dev2 ?d2)) (endDM (dev1 ?d2) (dev2 ?d1)))) (Invoked (function "touchMove") (args ?x ?y ?on) (dev ?dm)) (test (or (= ?dm ?d1) (= ?dm ?d2))) => (assert (bodyDM (dev1 ?d1) (dev2 ?d2) (args ?x ?y))) (call (args ?x ?y))'),
+						'(startDM (dev1 ?d1) (dev2 ?d2)) (not (or (endDM (dev1 ?d1) (dev2 ?d2)) (endDM (dev1 ?d2) (dev2 ?d1)))) (Invoked (function "mouseMove") (args ?a) (on ?on) (dev ?dm)) (test (or (= ?dm ?d1) (= ?dm ?d2))) => (assert (bodyDM (dev1 ?d1) (dev2 ?d2) (args ?a))) (call (args ?a))'),
 		endRule: rule("endRule",
-						'(startDM (dev1 ?d1) (dev2 ?d2) (on ?don) ) (Invoked (function "touchMove") (dev ?dx) (args ?x ?y ?on1)) (test (or (eq ?dx ?d1) (eq ?dx ?d2))) (not (endDM (dev1 ?d1) (dev2 ?d2) (on ?don))) => (printout "endDM asserted" crlf) (assert (endDM (dev1 ?d1) (dev2 ?d2) (on ?don) (args ?x ?y))) (call (args ?x ?y))')
+						'(startDM (dev1 ?d1) (dev2 ?d2) (on ?don) ) (Invoked (function "mouseMove") (dev ?dx) (args ?a) (on ?on1)) (test (or (eq ?dx ?d1) (eq ?dx ?d2))) (not (endDM (dev1 ?d1) (dev2 ?d2) (on ?don))) => (printout "endDM asserted" crlf) (assert (endDM (dev1 ?d1) (dev2 ?d2) (on ?don) (args ?a))) (call (args ?a))')
 	});
 	grpobj.on("startRule", function(data){
 		console.log("Collab function initiated. data: "+data);
@@ -830,13 +823,13 @@ function init() {
 	});
 	grpobj.on("bodyRule", function(data){
 		console.log("Collab function called. data: "+data);
-		debugger;
+		//perform collab drag
+		//collabDrag(data);
 	});
 	grpobj.on("endRule", function(data){
 		console.log("Collab function ended. data: "+data);
 		debugger;
 	});		
-
 }
 
 
@@ -861,8 +854,7 @@ function mainDraw() {
       allshapes[i].draw(ctx); // each shape draws itself
     }
 
-    // can add stuff you want drawn on top all the time here
-	//...
+	//can add other things here
 	
     // multi select 
 	// If the user is drawing a selection rectangle, draw it
@@ -904,7 +896,7 @@ function myMove(e){
 			if (isDrag) {
 				_shape.mouseMove(changeInX,changeInY,e);
 			} else if (isResizeDrag) {
-				_shape.mouseMove(mx,my, expectResize,e);
+				_shape.mouseMove(mx,my,e,expectResize);
 				break;
 			}
 		}	
@@ -1416,6 +1408,76 @@ function processDistData(data)
 				}
 			}
 		break;
+	}
+}
+/**
+ * function collabDrag: handle the collab drag event
+ * @param data: The set of arguments for the event
+**/ 
+function collabDrag(data){
+	debugger;
+	 //if you are dragging, then change mode to resize
+	if (isDrag){           
+		//set the selection handle
+		for (var i=0; i<boxes2.length; i++){
+		var box = boxes2[i];
+		//check if its the same box, in order to update
+		if (box.shpid !== data.shape.shpid)
+		continue;							
+
+		//calculations for resize - to simulate pinch
+		var left1 = box.x;
+		var top1 = box.y;				
+		var halfx = left1 + (box.w/2);
+		var halfy = top1 + (box.h/2);
+		var right1 = left1 + box.w;							
+		var bottom1 = top1 + box.h;
+
+		//check if the mouse is within the bounds of rect, 
+		//(note; also allow if it passes by an offset)
+		var offset = 50;
+		if (mx >= (left1 - offset) && mx <= (right1 + offset) && my >= (top1-offset) && my <= (bottom1 + offset)) {			
+			if (box.selected) {
+				//set the status todo: find a better way to set them..
+				isDrag = false;
+				isResizeDrag = true;
+				isDistEvent = true;
+
+				//if so, select the nearest selection box
+				//calculations - determine if the mouse is within the bounds of the shape
+				var selhandles = new Array();
+				selhandles.push({x: left1,y: top1});	//sel0
+				selhandles.push({x: halfx,y: top1});	//sel1
+				selhandles.push({x: right1,y: top1});	//sel2
+				selhandles.push({x: left1, y: halfy});	//sel3
+				selhandles.push({x: right1, y: halfy});	//sel4
+				selhandles.push({x: left1,y: bottom1});	//sel5
+				selhandles.push({x: halfx, y: bottom1});	//sel6
+				selhandles.push({x: right1,y:bottom1});	//sel7
+
+				//get the eucl. distance to determine.. 
+				//..how near the remote mouse is to the sel handles
+				var leastDist = 99999, idx = -1;
+				for (var i=0; i<selhandles.length; i++){
+					var handle = selhandles[i];
+					var dist = Math.sqrt((mx - handle.x) *(mx - handle.x) + (my - handle.y) * (my - handle.y));
+					//check least dist, also idx
+					//idx now holds the current nearest selection handle index
+					if (dist < leastDist){
+							leastDist = dist;
+							idx = i;
+					}
+				}
+				//end of loop, so next draw update will use that selection handle
+				//to resze shape
+				expectResize = idx;					
+
+	}
+	}
+	}
+	}
+	//	invalidate the canvas!
+	invalidate();
 	}
 }
 /**

@@ -8,6 +8,6 @@
 (deftemplate bodyDM (slot dev1) (slot dev2) (multislot args))
 (set-default-timespan "bodyDM" 100)
 
-(deftemplate Invoked (slot fn) (slot dev) (multislot args))
+(deftemplate Invoked (slot fn) (slot dev) (slot args))
 (set-default-timespan "Invoked" 5000)
 

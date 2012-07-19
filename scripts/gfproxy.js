@@ -18,25 +18,60 @@ var gfProxyInit = (function(leadersocket) {
 		proxy function that sends to server that an interception has happened
 		@param fn - the function being intercepted
 		@param invoked - the invoked array for the sequence
-		@param allArgs - the 'arguments' array of the invoked function
+		@param args - the 'arguments' array of the invoked function. includes receiver.
+		@param rec - the receiving shape
+		@param params - the extracted params of invoked function (extracted, due to js limits)
 	*/
-	function proxyFunction(fn, invoked, allArgs){	
+	function proxyFunction(fn, fnname, args , rec, params){	
+	
+		//first format args with their params
+		var fnargs = {};
+		
+		for (var i = 0, l = args.length; i < l; i++){
+			//first check if param is defined
+			if (!params[i]){
+				//if not, create new param name for this arg
+				params[i] = 'arg_'+ i;
+			}
+			//limitation: need to remove cormat event object in the event args for serialization
+			if  (isEvent(args[i])){
+				var e = args[i];				
+				var basicEventOpts = {
+					pointerX:  e.pointerX,
+					pointerY:  e.pointerY,
+					pageX: e.pageX,
+					pageY: e.pageY,
+					screenX: e.screenX,
+					screenY: e.screenY,
+					button: e.button,
+					ctrlKey: e.ctrlKey,
+					altKey: e.altKey,
+					shiftKey: e.shiftKey,
+					metaKey: e.metaKey,
+					bubbles: e.bubbles,
+					cancelable: e.cancelable
+				};
+				fnargs[params[i]] = basicEventOpts;
+			} else {
+				//todo: may need to strip whitespace
+				fnargs[params[i]] = args[i];
+			}
+		}			
+
 		var interception = {
-			'fn': invoked.fn,
-			args: invoked.args,
-			argmap: '',//allArgs,
-			rec: invoked.receiver || 'none'
+			//'fn': fn,			//the intercepted function
+			name: fnname,		//its name			
+			'rec': rec,			//the receiver
+			args: fnargs		//its arguments
 		};
-		debugger;
-		fn();
-		/*leadersocket.emit('fn_invoked', interception, function (data) {			
-			
+		
+		leadersocket.emit('fn_invoked', interception, function (data) {						
 			if (!data.isseqcb){				
 				//To call the normal (invoked) function call: fn.
 				fn();
 			}					
 		});
-		*/
+		
 	}
 	/**
 		send the rule to server to create necessary templates/rule(s)
@@ -47,8 +82,8 @@ var gfProxyInit = (function(leadersocket) {
 		
 		//send event to leader/server. can add client id here
 		leadersocket.emit('register_sequence', rule.rulename, rule.rule, function (msg) {		
-			//output the results of the registration
-			//note this is not the sequence callback
+			//output the results of the registration of the rule
+			//note: this is not the sequence callback
 			console.log(msg); 
 		});
 		
@@ -81,29 +116,29 @@ var gfProxyInit = (function(leadersocket) {
 			return typeof o[prop] === "function" && (prop.lastIndexOf("mouse", 0) === 0); 
 		});
 		
-		for ( i = 0, l = fnproperties.length; i < l; i++ ){			
+		for ( i = 0, l = fnproperties.length; i < l; i++ ){		
 			
 			inv = fnproperties[i];
 			func = o[inv];
 			
 			//check if it is a function
 			if (typeof func !== "function") continue;
-			//replace fn with proxy fn
+			//function params
 			var params = getFunctionParams(func);
-			
-			o[inv] = ( function (val, fun, theparams) {	//enclose in closure
+			//replace fn with proxy fn
+			o[inv] = ( function (val, fun, rec, theparams) {	//closure
 				return function() {
 				//receiver is "this" when fn is called. args is in arguments array
 				var self = this, args = Array.prototype.slice.call(arguments);
-				//call proxy
-			
+				
+				//call proxy			
 				return proxyFunction.call(this, function() {
 					//remember scope could be lost, so use self var as scope
 					//debugger;
 					return fun.apply(self, args);
-					}, val, args, theparams);
+					}, val, args, rec, theparams);
 				}
-			})(inv,func, params);
+			})(inv,func,o.shpid, params);
 		}
 	}
 	
@@ -144,13 +179,52 @@ var gfProxyInit = (function(leadersocket) {
 		}
 	})();
 	
+	/**
+	 * decycle and cycle functions
+	 * deal with circular references when (de)serializing
+	 * adapted from: http://glittle.org/blog/cyclic-json/
+	 */
+	function decycle(obj){
+		
+		seen = [];
+
+		var newobj = JSON.stringify(obj, function(key, val) {
+		   if (typeof val === "object") {
+				if (seen.indexOf(val) >= 0)
+					return undefined;
+				seen.push(val);
+			}
+			return val;
+		})
+		
+		return newobj;
+	}
+	
+	/**
+	 * function isEvent: serializing mouse event object in javascript is a pain,
+	 * so use this function to check an intercepted argument is an event. if so, strip it down 
+	 * see: http://stackoverflow.com/questions/1458894/how-to-determine-if-javascript-object-is-an-event
+	 * to its essentials before sending to the leader
+	 */
+	function isEvent(a){
+		var txt, es=false;
+		txt = Object.prototype.toString.call(a).split('').reverse().join('');
+		es = (txt.indexOf("]tnevE") == 0)? true: false; // Firefox, Opera, Safari, Chrome
+		if(!es){
+			txt = a.constructor.toString().split('').reverse().join('');
+			es = (txt.indexOf("]tnevE") == 0)? true: false; // MSIE
+		}
+		return es;
+	}
+
+
+	//-----------------------
+	
 	/** proxy. inspired by Darren Schnare's aopjs, MIT
 		@param obj - object to be proxied
 	*/
 	return {
-		register: function (obj){
-			var properties, fnproperties;
-			
+		register: function (obj){						
 			applyInterceptions(obj);
 		},
 		'registerWhenever': sendRuleToServer

@@ -32,7 +32,7 @@
 			console.info(msg);
 		});
 		//join the room
-		roomsocket.emit('join room', {'rname':rname});
+		roomsocket.emit('join_room', {'rname':rname});
 		//message from device in room received
 		roomsocket.on('message', function(data) {						
 			// handle data. contains shape: rect and mouseevt: evt		
