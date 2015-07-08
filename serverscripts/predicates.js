@@ -12,7 +12,7 @@ var utilities = require('./utilities');
 
 		this.add = function(obj){
 			var theid = getid();
-			this[theid] = obj;
+			this[theid] = obj;			
 			return theid;
 		};
 		this.get = function(id){

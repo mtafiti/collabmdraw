@@ -56,7 +56,8 @@ function disconnect(){
 
 function addCode(sExpressionCode){
 	var str = ["s-expression",sExpressionCode];	
-	str = JSON.stringify(str);	
+	str = JSON.stringify(str);
+
 	console.log(str);
 	
 	send(str);
@@ -101,14 +102,14 @@ function receiveData(data) {
 	
 	//call callback for event type
 	dataArr.forEach(function(item){
-		try{ var jsonData = JSON.parse(item);
-		var listener = getListener(jsonData.type);
-		if (listener){
-			listener.callback(jsonData);
+		try{
+			var jsonData = JSON.parse(item);
+			var listener = getListener(jsonData.type);
+			if (listener){
+				listener.callback(jsonData);
 		}		
 		}catch(err){
-			console.log('ERROR: unable to parse output from midas as Json: '+ typeof data);
-			console.dir(data);
+			console.log('Error when parsing json OR on collab callback: ' + err.message);
 		}
 	});	
 }

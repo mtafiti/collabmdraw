@@ -1,10 +1,15 @@
-var http = require("http"),	
+
+//FOR MINGO: SERVER: 12 (INTIALIZATION + CALLBACK ERROR HANDLER REG) BUT REQUIRES MINGO SERVER PACKAGE
+// GROUP COORDINATION: 1 (INITIALIZATION)
+//TOTAL: 30
+var http = require("http"),
     io = require('socket.io'),
 	querystring = require('querystring'),
-	midas = require('./midas');
+	midas = require('./midas'),
+    _ = require("underscore");
 
 //hold the rooms
-var roomsarr = [], 	PORT = 8000;
+var roomsarr = [], count = 0, 	PORT = 8000;
 
 
 function start(route, handle){
@@ -18,7 +23,7 @@ function start(route, handle){
 		var params = querystring.parse(request.url);		
 		if (request.url.indexOf("room=new") !== -1){
 			
-			//check if room is there already
+			//check if room is there already - keep the order of connection to imply layout of extended canvas
 			if (handle["roomExists"](params.rname,roomsarr) === false){
 				roomsarr.push({name: params.rname, data: ''});
 			}
@@ -38,12 +43,13 @@ function start(route, handle){
 	  //a device has connected to rooms 'channel'..
 	  .on('connection', function (socket) {
 		//var to keep room of socket
-		var socketRoom = '';			
+		var socketRoom = '';
+        var socketNo = count++;
 		//leader can multicast to everyone who connected
 		rooms.emit('device connected', {
 			msg: 'Device of id:' +socket.id+ 'connected to room'
 		});
-		socket.on('join_room',function(msg){
+		socket.on('join_room',function(msg, cb){
 			//device joins room
 			socket.join(msg.rname);
 			socketRoom = msg.rname;
@@ -52,6 +58,11 @@ function start(route, handle){
 			socket.set('roomname', msg.rname, function () {
 				socket.emit('joined',{ msg: "you've joined " + socketRoom });
 			});
+            socket.set('deviceno', msg.rname, function () {
+                socket.emit('device_no',{ msg: "your device number: " + socketNo});
+            });
+
+            cb(null, {devno: socketNo, room: socketRoom});
 			//OR io.sockets.in('some other room').emit('hi');						
 		});
 		//msg sent to devices in room
@@ -73,53 +84,104 @@ function start(route, handle){
 					socket.send({msg: 'You are not registered to a room'});
 					return;
 				}
-				//now send to devices in room
-				//console.log(socket.id+' about to broadcast '+data.eventType+ ' data to room: ' + socketRoom);
-				socket.broadcast.json.to(name).send(data);
+
+                //now send to devices in room
+                //console.log(socket.id+' about to broadcast '+data.eventType+ ' data to room: ' + socketRoom);
+                socket.broadcast.json.to(name).send('room_receive',{data: data, orientation: socketNo}); //no implies the layout
 			});			
 		});
 	 });
 	
 	//the leader channel
 	var leader = io
-	  .of('/leader')
-	  //a device has connected to leader 'channel'..
-	  .on('connection', function (socket) {
-		socket.emit('connection successful', {
-			msg: 'Connected to leader successfully'
-		});
-		/*leader can multicast to everyone who connected
-		/leader.emit('device connected', {
-			msg: 'Device connected to leader'
-		});
-		*/
-		socket.on('register_sequence', function (seqname, rule, returnfn) {			
-			
-			midas.publishSequenceConfig(seqname, rule, function(invokes){
-				//at this point midas has identified a cb sequence				
-				//get room name, then send to ppl in room
-				socket.get('roomname', function (err, name) {
-					//now send to devices in room
-					socket.broadcast.json.to(name).emit('sequence_callback',invokes);
-					//console.log("Sequence callback called. data: ");
-					//console.dir(invokes);				
-				});
-				
-			});
-			//finished registering sequence
-			returnfn({msg: 'Registered sequence successfully'});
-		  });
-		  socket.on('fn_invoked', function (data, returnfn) {	  
-				
-				midas.publishInvoke(data,socket.id, function(data){
-							//return the result to client
-							returnfn(data);
-				});		
-		  });
-	  });
-	
+        .of('/leader')
+        //a device has connected to leader 'channel'..
+        .on('connection', function (socket) {
+        socket.emit('connection successful', {
+            msg: 'Connected to leader successfully'
+        });
+        /*leader can multicast to everyone who connected
+        /leader.emit('device connected', {
+            msg: 'Device connected to leader'
+        });
+        */
+
+            socket.on('register_sequence', function (collabrulename, rule, returnfn) {
+
+            midas.createCollabRule(collabrulename, rule, function(invokes){
+                //seqcallback: at this point midas has identified a cb sequence
+                //get room name, then send to ppl in room
+                socket.get('roomname', function (err, name) {
+                    //append correct rule to invokes
+                    invokes.forEach(function(invoke){
+                        if (invoke) {
+                            invoke.rulename = collabrulename;
+                            //console.dir(invoke);
+                        }
+                    });
+                    //now send to devices in room
+                    //socket.broadcast.json.to(name).emit('sequence_callback',invokes);
+
+                    //leader.in(data.session).socket.emit('test', "Test message" + count++);
+                    _.forEach(leader.in(name).sockets, function(socket){
+                        //if (data.device === socket.id) { return; }
+                        socket.emit('sequence_callback', invokes);
+
+                    });
+                });
+
+            });
+            //finished registering sequence
+            returnfn({msg: 'Registered sequence successfully'});
+        });
+
+        socket.on('fn_invoked', function (data, returnfn) {
+
+            midas.publishInvoke(data,socket.id, function(data){
+                    //return the result to client
+                    returnfn(null, data);
+                });
+        });
+
+
+        socket.on('assert_event', function (eventname, eventobj, returnfn) {
+
+            midas.assertEvent(eventname, eventobj, socket.id, function(err, data){
+                //call acknowledgement fn
+                returnfn(err, data);
+            });
+        });
+
+        socket.on('reg_replicate_event', function (eventname, eventobj, returnfn) {
+
+            midas.replicateEvent(eventname, eventobj, socket.id, function(err, data){
+                //return the result to client
+                returnfn(err, data);
+            });
+        });
+
+    });
 	//start socket connection to midas
-	midas.start();
+
+    // when midas receives replicated event, it waill call this function
+	midas.start(function(success){
+        if (success)
+            console.log("Mingo server started successfully.. ");
+
+        var count = 0;
+        //set replicated fn
+        midas.setReplicateFn(function(data){
+            //console.log(" Replicated action called " + data.name);
+            //now send to devices in room
+
+            //leader.in(data.session).socket.emit('test', "Test message" + count++);
+            _.forEach(leader.in(data.session).sockets, function(socket){
+                if (data.device === socket.id) { return; }
+                socket.emit('receive_replicated_event', data);
+
+            });
+        });
+    });
 }
 
 exports.start = start;

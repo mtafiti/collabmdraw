@@ -133,9 +133,9 @@ function publishTouchEvent(data, clientId, invokecb){
 		}
 	})(argkey), SEQ_TIME_LIMIT);
 }
-/** publishSequenceConfig - send sequence initialization to midas
-	@param: obj: 	
-*/ 
+/** createCollabRule - send sequence initialization to midas
+ @param: obj:
+ */
 function publishSequenceConfig(invokeArr, seqname, seqcb){
 	//make the predicates first
 	var preds, i, l, inv, pred, seq;	
@@ -173,5 +173,5 @@ exports.publish = publish;
 exports.subscribe = subscribe;
 exports.unsubscribe = unsubscribe;
 exports.addSExpression = addSExpression;
-exports.publishSequenceConfig = publishSequenceConfig;
+exports.createCollabRule = publishSequenceConfig;
 exports.publishTouchEvent = publishTouchEvent;

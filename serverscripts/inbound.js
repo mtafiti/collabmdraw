@@ -11,7 +11,7 @@ var net = require('net');
 var socket;
 //midas host
 var midasHost = "127.0.0.1", midasPort = 4337, inboundName = '', 
-	file='G:/Masters/Second Year/Thesis/Work/Project/draw/serverscripts/templates.clp';
+	file='serverscripts/templates.clp';
 
 function connect(host, port, name, callback){
 
@@ -47,14 +47,14 @@ function connect(host, port, name, callback){
 	  console.dir(err);
 	});
 	socket.on('end', function() {
-	  console.log("M>> "+'[Note] Midas Connection closed.');
+	  throw new Error("M>> "+'[Note] Midas Connection closed.');
 	});
 }
 //add and send code to midas
 function addCode(sExpressionCode){
 	var str = ["s-expression",sExpressionCode];	
 	str = JSON.stringify(str);	
-	//console.log("M>> "+str);	
+	console.log("M addCode>> "+str);
 	send(str);
 }
 //add and send string (not code) to midas

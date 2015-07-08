@@ -97,14 +97,15 @@ function split2(str, delim){
 		return str;
 	}
 	var re = new RegExp(delim,"gi");
-	var newstringreplaced = str.replace(re, delim+"¬");
-	var newarr = newstringreplaced.split("¬");
+	var newstringreplaced = str.replace(re, delim+"ï¿½");
+	var newarr = newstringreplaced.split("ï¿½");
 	//remove null/empty elms
 	newarr = newarr.filter(function(item){
 		return (item != null && item !== '' && item!= 'undefined');
 	});
 	return newarr;
 }
+
 exports.uuid = uuid;
 exports.uuidFast = uuidFast;
 exports.uuidCompact = uuidCompact;

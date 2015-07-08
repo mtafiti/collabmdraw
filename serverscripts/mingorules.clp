@@ -1,3 +1,5 @@
+; this file is only used for testing
+
 (deftemplate startRule (multislot args))
 (defrule rule-startRule
 	(Invoked (fn "moveDown") (dev ?d1) (on ?on1) (args ?a1))
@@ -76,3 +78,10 @@ startRule: rule("startRule",
 						'(call (args ?x ?y))'),
         endRule: rule("endRule",
                         '(startDM (dev1 ?d1) (dev2 ?d2) (on ?don) ) (Invoked (function "mouseMove") (dev ?dx) (args ?x ?y) (on ?on1)) (test (or (eq ?dx ?d1) (eq ?dx ?d2))) (not (endDM (dev1 ?d1) (dev2 ?d2) (on ?don))) => (printout "endDM asserted" crlf) (assert (endDM (dev1 ?d1) (dev2 ?d2) (on ?don) (args ?x ?y))) (call (args ?x ?y))')
+
+;-------------------------------------
+; replicate rule
+(defrule replicate-action-move-GRP-A6AC1C4B-D069-4A26-AC38-7C183419C4DE
+	(REvent  (name "move")  (args ?a ) (receiver "GRP-A6AC1C4B-D069-4A26-AC38-7C183419C4DE") (session "mingoroom") (device ?dev) )
+	=>
+	(assert (ReplicateEvent (name "move") (args ?a) (receiver "GRP-A6AC1C4B-D069-4A26-AC38-7C183419C4DE") (device ?dev) (session "mingoroom") )) )

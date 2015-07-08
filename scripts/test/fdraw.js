@@ -946,7 +946,7 @@ function myMove(e){
 				// 0  1  2
 				// 3     4
 				// 5  6  7
-				box.resize(expectResize);				
+				box.resize(expectResize, mx, my);
                 publishDistData('editshape',e,box);  //can create a new state for resize..                                                       
 				//for now use editshape
 				invalidate();
