@@ -5,11 +5,11 @@ This is the mDraw application for the Mingo Framkework for Coordinating collabor
 
 ## Installation
 
-To run, install from npm the packages: underscore. 
+To run, install from npm the packages: underscore. Also needed is the midas engine (contact us).
 
 ## Initialization
 
-Start node with sdrawserver.js. To join a session load login.html.
+Start node with sdrawserver.js. To join a session load index.html.
 
 ## Tests
 
